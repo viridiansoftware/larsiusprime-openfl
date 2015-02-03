@@ -1029,13 +1029,15 @@ class Stage extends DisplayObjectContainer {
 			return;
 			
 		}
-		
+
 		if (sendEnterFrame) {
-			
+			__broadcast (new Event ("HXT_BEFORE_FRAME"));
+			hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.USER);
 			__broadcast (new Event (Event.ENTER_FRAME));
-			
+			hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.USER);
 		}
 		
+		hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
 		if (__invalid) {
 			
 			__invalid = false;
@@ -1044,6 +1046,7 @@ class Stage extends DisplayObjectContainer {
 		}
 		
 		lime_render_stage (__handle);
+		hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
 		
 	}
 	

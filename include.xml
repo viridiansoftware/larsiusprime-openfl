@@ -35,7 +35,9 @@
 	<haxelib name="lime" if="display || rebuild" />
 	<!-- <include haxelib="aether" /> -->
 	<template path="templates" />
-	
+
+	<haxelib name="hxtelemetry"/> <!-- TODO: prototype only, proper integration -->
+
 	<include haxelib="${custom-backend}" if="display custom-backend" />
 	<haxelib name="${custom-backend}" if="custom-backend" unless="display" />
 	
