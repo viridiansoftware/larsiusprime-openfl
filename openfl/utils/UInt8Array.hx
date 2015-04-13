@@ -1,8 +1,8 @@
 package openfl.utils;
 
 
-#if (flash || openfl_next || js || display)
+#if !openfl_legacy
 typedef UInt8Array = lime.utils.UInt8Array;
 #else
-typedef UInt8Array = openfl._v2.utils.UInt8Array;
+typedef UInt8Array = openfl._legacy.utils.UInt8Array;
 #end

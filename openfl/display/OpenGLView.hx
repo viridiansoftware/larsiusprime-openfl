@@ -1,4 +1,4 @@
-package openfl.display; #if (flash || openfl_next || js || display)
+package openfl.display; #if !openfl_legacy
 
 
 #if !flash
@@ -202,7 +202,7 @@ class OpenGLView extends DirectRenderer {
 		
 		return false;
 		
-		#elseif js
+		#elseif (js && html5)
 		
 		if (untyped (!window.WebGLRenderingContext)) {
 			
@@ -239,5 +239,5 @@ class OpenGLView extends DirectRenderer {
 
 
 #else
-typedef OpenGLView = openfl._v2.display.OpenGLView;
+typedef OpenGLView = openfl._legacy.display.OpenGLView;
 #end

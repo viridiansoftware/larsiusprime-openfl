@@ -1,4 +1,4 @@
-package openfl.display; #if (flash || openfl_next || js || display)
+package openfl.display; #if !openfl_legacy
 
 
 import openfl.display.BitmapData;
@@ -25,6 +25,7 @@ class Tilesheet {
 	public static inline var TILE_BLEND_ADD      = 0x00010000;
 	public static inline var TILE_BLEND_MULTIPLY = 0x00020000;
 	public static inline var TILE_BLEND_SCREEN = 0x00040000;
+	public static inline var TILE_BLEND_SUBTRACT = 0x00080000;
 	
 	@:noCompletion private static var __defaultPoint = new Point (0, 0);
 	
@@ -213,5 +214,5 @@ class Tilesheet {
 
 
 #else
-typedef Tilesheet = openfl._v2.display.Tilesheet;
+typedef Tilesheet = openfl._legacy.display.Tilesheet;
 #end

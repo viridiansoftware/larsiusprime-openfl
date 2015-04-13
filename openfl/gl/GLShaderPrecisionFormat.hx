@@ -1,8 +1,8 @@
 package openfl.gl;
 
 
-#if (!openfl_next && !flash && !js && !display)
-typedef GLShaderPrecisionFormat = openfl._v2.gl.GLShaderPrecisionFormat;
+#if openfl_legacy
+typedef GLShaderPrecisionFormat = openfl._legacy.gl.GLShaderPrecisionFormat;
 #else
 typedef GLShaderPrecisionFormat = lime.graphics.opengl.GLShaderPrecisionFormat;
 #end

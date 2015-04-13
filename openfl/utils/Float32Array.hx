@@ -1,8 +1,8 @@
 package openfl.utils;
 
 
-#if (flash || openfl_next || js || display)
+#if !openfl_legacy
 typedef Float32Array = lime.utils.Float32Array;
 #else
-typedef Float32Array = openfl._v2.utils.Float32Array;
+typedef Float32Array = openfl._legacy.utils.Float32Array;
 #end

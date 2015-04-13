@@ -1,4 +1,4 @@
-package openfl.display; #if (flash || openfl_next || js || display) 
+package openfl.display; #if !openfl_legacy
 
 
 import openfl.display.DisplayObject;
@@ -45,5 +45,5 @@ class DirectRenderer extends #if flash Sprite #else DisplayObject #end {
 
 
 #else
-typedef DirectRenderer = openfl._v2.display.DirectRenderer;
+typedef DirectRenderer = openfl._legacy.display.DirectRenderer;
 #end

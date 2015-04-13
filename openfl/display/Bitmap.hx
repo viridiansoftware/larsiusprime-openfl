@@ -1,4 +1,4 @@
-package openfl.display; #if !flash #if (display || openfl_next || js)
+package openfl.display; #if !flash #if !openfl_legacy
 
 
 import openfl._internal.renderer.canvas.CanvasBitmap;
@@ -12,8 +12,6 @@ import openfl.geom.Rectangle;
 #if js
 import js.html.ImageElement;
 #end
-
-@:access(openfl.display.BitmapData)
 
 
 /**
@@ -50,6 +48,11 @@ import js.html.ImageElement;
  * <code>addEventListener()</code> method of the display object container that
  * contains the Bitmap object.</p>
  */
+
+@:access(openfl.display.BitmapData)
+@:access(openfl.display.Graphics)
+
+
 class Bitmap extends DisplayObjectContainer {
 	
 	
@@ -127,7 +130,7 @@ class Bitmap extends DisplayObjectContainer {
 		
 		if (point.x > 0 && point.y > 0 && point.x <= bitmapData.width && point.y <= bitmapData.height) {
 			
-			if (stack != null) {
+			if (stack != null && !interactiveOnly) {
 				
 				stack.push (this);
 				
@@ -168,7 +171,23 @@ class Bitmap extends DisplayObjectContainer {
 		renderSession.context.rect (0, 0, width, height);
 		
 	}
+
 	
+	@:noCompletion @:dox(hide) public override function __updateMask (maskGraphics:Graphics):Void {
+
+		maskGraphics.__commands.push(OverrideMatrix(this.__worldTransform));
+		maskGraphics.beginFill(0);
+		maskGraphics.drawRect(0, 0, bitmapData.width, bitmapData.height);
+
+		if (maskGraphics.__bounds == null) {
+			maskGraphics.__bounds = new Rectangle();
+		}
+		
+		__getBounds(maskGraphics.__bounds, @:privateAccess Matrix.__identity);
+		
+		super.__updateMask(maskGraphics);
+		
+	}
 	
 	
 	
@@ -247,7 +266,7 @@ class Bitmap extends DisplayObjectContainer {
 
 
 #else
-typedef Bitmap = openfl._v2.display.Bitmap;
+typedef Bitmap = openfl._legacy.display.Bitmap;
 #end
 #else
 typedef Bitmap = flash.display.Bitmap;

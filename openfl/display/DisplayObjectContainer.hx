@@ -1,6 +1,7 @@
-package openfl.display; #if !flash #if (display || openfl_next || js)
+package openfl.display; #if !flash #if !openfl_legacy
 
 
+import openfl._internal.renderer.canvas.CanvasGraphics;
 import openfl._internal.renderer.RenderSession;
 import openfl.display.Stage;
 import openfl.errors.RangeError;
@@ -8,8 +9,6 @@ import openfl.events.Event;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
-
-@:access(openfl.events.Event)
 
 
 /**
@@ -33,6 +32,11 @@ import openfl.geom.Rectangle;
  * <p>For more information, see the "Display Programming" chapter of the
  * <i>ActionScript 3.0 Developer's Guide</i>.</p>
  */
+
+@:access(openfl.events.Event)
+@:access(openfl.display.Graphics)
+
+
 class DisplayObjectContainer extends InteractiveObject {
 	
 	
@@ -156,7 +160,10 @@ class DisplayObjectContainer extends InteractiveObject {
 			
 			child.__setTransformDirty ();
 			child.__setRenderDirty ();
-			child.dispatchEvent (new Event (Event.ADDED, true));
+			
+			var event = new Event (Event.ADDED, true);
+			event.target = child;
+			child.dispatchEvent (event);
 			
 		}
 		
@@ -224,7 +231,10 @@ class DisplayObjectContainer extends InteractiveObject {
 			
 			child.__setTransformDirty ();
 			child.__setRenderDirty ();
-			child.dispatchEvent (new Event (Event.ADDED, true));
+			
+			var event = new Event (Event.ADDED, true);
+			event.target = child;
+			child.dispatchEvent (event);
 			
 		}
 		
@@ -398,7 +408,7 @@ class DisplayObjectContainer extends InteractiveObject {
 		point = localToGlobal (point);
 		var stack = new Array<DisplayObject> ();
 		__hitTest (point.x, point.y, false, stack, false);
-		stack.shift ();
+		stack.reverse ();
 		return stack;
 		
 	}
@@ -655,6 +665,8 @@ class DisplayObjectContainer extends InteractiveObject {
 	
 	@:noCompletion private override function __getBounds (rect:Rectangle, matrix:Matrix):Void {
 		
+		super.__getBounds(rect, matrix);
+		
 		if (__children.length == 0) return;
 		
 		var matrixCache = null;
@@ -673,7 +685,7 @@ class DisplayObjectContainer extends InteractiveObject {
 			child.__getBounds (rect, null);
 			
 		}
-			
+		
 		if (matrix != null) {
 			
 			__worldTransform = matrixCache;
@@ -690,41 +702,54 @@ class DisplayObjectContainer extends InteractiveObject {
 		
 		var i = __children.length;
 		
-		if (interactiveOnly && (stack == null || !mouseChildren)) {
+		if (interactiveOnly) {
 			
-			while (--i >= 0) {
+			if (stack == null || !mouseChildren) {
 				
-				if (__children[i].__hitTest (x, y, shapeFlag, null, interactiveOnly)) {
+				while (--i >= 0) {
 					
-					if (stack != null) {
+					if (__children[i].__hitTest (x, y, shapeFlag, null, true)) {
 						
-						stack.push (this);
+						if (stack != null) {
+							
+							stack.push (this);
+							
+						}
+						
+						return true;
 						
 					}
 					
-					return true;
+				}
+				
+			} else if (stack != null) {
+				
+				var length = stack.length;
+				
+				while (--i >= 0) {
+					
+					if (__children[i].__hitTest (x, y, shapeFlag, stack, interactiveOnly)) {
+						
+						stack.insert (length, this);
+						
+						return true;
+						
+					}
 					
 				}
 				
 			}
 			
-		} else if (stack != null) {
-			
-			var length = stack.length;
+		} else {
 			
 			while (--i >= 0) {
 				
-				if (__children[i].__hitTest (x, y, shapeFlag, stack, interactiveOnly)) {
-					
-					stack.insert (length, this);
-					
-					return true;
-					
-				}
+				__children[i].__hitTest (x, y, shapeFlag, stack, false);
 				
 			}
 			
 		}
+		
 		
 		return false;
 		
@@ -735,6 +760,10 @@ class DisplayObjectContainer extends InteractiveObject {
 		
 		if (!__renderable || __worldAlpha <= 0) return;
 		
+		#if !neko
+		
+		super.__renderCanvas (renderSession);
+		
 		if (scrollRect != null) {
 			
 			//renderSession.maskManager.pushRect (scrollRect, __worldTransform);
@@ -743,7 +772,7 @@ class DisplayObjectContainer extends InteractiveObject {
 		
 		if (__mask != null) {
 			
-			//renderSession.maskManager.pushMask (__mask);
+			renderSession.maskManager.pushMask (__mask);
 			
 		}
 		
@@ -757,7 +786,7 @@ class DisplayObjectContainer extends InteractiveObject {
 		
 		if (__mask != null) {
 			
-			//renderSession.maskManager.popMask ();
+			renderSession.maskManager.popMask ();
 			
 		}
 		
@@ -767,18 +796,24 @@ class DisplayObjectContainer extends InteractiveObject {
 			
 		}
 		
+		#end
+		
 	}
 	
 	
 	@:noCompletion @:dox(hide) public override function __renderDOM (renderSession:RenderSession):Void {
 		
+		#if !neko
+		
 		//if (!__renderable) return;
 		
-		//if (__mask != null) {
+		super.__renderDOM (renderSession);
+		
+		if (__mask != null) {
 			
-			//renderSession.maskManager.pushMask (__mask);
+			renderSession.maskManager.pushMask (__mask);
 			
-		//}
+		}
 		
 		// TODO: scrollRect
 		
@@ -800,11 +835,13 @@ class DisplayObjectContainer extends InteractiveObject {
 		
 		__removedChildren = [];
 		
-		//if (__mask != null) {
+		if (__mask != null) {
 			
-			//renderSession.maskManager.popMask ();
+			renderSession.maskManager.popMask ();
 			
-		//}
+		}
+		
+		#end
 		
 	}
 	
@@ -813,10 +850,28 @@ class DisplayObjectContainer extends InteractiveObject {
 		
 		if (!__renderable || __worldAlpha <= 0) return;
 		
+		var masked = __mask != null && __maskGraphics != null && __maskGraphics.__commands.length > 0;
+		
+		if (masked) {
+			
+			renderSession.spriteBatch.stop ();
+			renderSession.maskManager.pushMask (this, renderSession);
+			renderSession.spriteBatch.start ();
+			
+		}
+		
+		super.__renderGL (renderSession);
+		
 		for (child in __children) {
 			
 			child.__renderGL (renderSession);
 			
+		}
+		
+		if(masked) {
+			renderSession.spriteBatch.stop();
+			renderSession.maskManager.popMask(this, renderSession);
+			renderSession.spriteBatch.start();
 		}
 		
 		__removedChildren = [];
@@ -826,10 +881,22 @@ class DisplayObjectContainer extends InteractiveObject {
 	
 	@:noCompletion @:dox(hide) public override function __renderMask (renderSession:RenderSession):Void {
 		
+		if (__graphics != null) {
+			
+			CanvasGraphics.renderMask (__graphics, renderSession);
+			
+		}
+		
 		var bounds = new Rectangle ();
 		__getLocalBounds (bounds);
 		
-		renderSession.context.rect (0, 0, bounds.width, bounds.height);	
+		renderSession.context.rect (0, 0, bounds.width, bounds.height);
+		
+		/*for (child in __children) {
+			
+			child.__renderMask (renderSession);
+			
+		}*/
 		
 	}
 	
@@ -852,9 +919,13 @@ class DisplayObjectContainer extends InteractiveObject {
 				
 			}
 			
-			for (child in __children) {
+			if (__children != null) {
 				
-				child.__setStageReference (stage);
+				for (child in __children) {
+					
+					child.__setStageReference (stage);
+					
+				}
 				
 			}
 			
@@ -863,11 +934,12 @@ class DisplayObjectContainer extends InteractiveObject {
 	}
 	
 	
-	@:noCompletion @:dox(hide) public override function __update (transformOnly:Bool, updateChildren:Bool):Void {
+	@:noCompletion @:dox(hide) public override function __update (transformOnly:Bool, updateChildren:Bool, ?maskGraphics:Graphics = null):Void {
 		
-		super.__update (transformOnly, updateChildren);
+		super.__update (transformOnly, updateChildren, maskGraphics);
 		
-		if (!__renderable #if dom && !__worldAlphaChanged && !__worldClipChanged && !__worldTransformChanged && !__worldVisibleChanged #end) {
+		// nested objects into a mask are non renderables but are part of the mask
+		if (!__renderable && !__isMask #if dom && !__worldAlphaChanged && !__worldClipChanged && !__worldTransformChanged && !__worldVisibleChanged #end) {
 			
 			return;
 			
@@ -879,7 +951,7 @@ class DisplayObjectContainer extends InteractiveObject {
 			
 			for (child in __children) {
 				
-				child.__update (transformOnly, true);
+				child.__update (transformOnly, true, maskGraphics);
 				
 			}
 			
@@ -919,7 +991,7 @@ class DisplayObjectContainer extends InteractiveObject {
 
 
 #else
-typedef DisplayObjectContainer = openfl._v2.display.DisplayObjectContainer;
+typedef DisplayObjectContainer = openfl._legacy.display.DisplayObjectContainer;
 #end
 #else
 typedef DisplayObjectContainer = flash.display.DisplayObjectContainer;

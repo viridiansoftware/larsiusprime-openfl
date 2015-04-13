@@ -1,6 +1,6 @@
 package openfl.display;
 
-
+import haxe.PosInfos;
 import massive.munit.Assert;
 import openfl.filters.GlowFilter;
 import openfl.geom.ColorTransform;
@@ -108,7 +108,7 @@ class BitmapDataTest {
 	}
 	
 	
-	#if (html5 || openfl_next) @Ignore #end @Test public function applyFilter () {
+	#if (!flash && !openfl_legacy) @Ignore #end @Test public function applyFilter () {
 		
 		#if !html5
 		
@@ -173,7 +173,7 @@ class BitmapDataTest {
 		
 		// premultiplied
 		
-		#if (!flash && (js || openfl_next))
+		#if (!flash && !openfl_legacy)
 		var colorTransform = new ColorTransform (0, 0, 0, 1, 0xFF, 0, 0, 0);
 		
 		var bitmapData = new BitmapData (100, 100);
@@ -313,7 +313,7 @@ class BitmapDataTest {
 	}
 	
 	
-	#if openfl_next @Ignore #end @Test public function draw () {
+	#if (!flash && !openfl_legacy) @Ignore #end @Test public function draw () {
 		
 		var bitmapData = new BitmapData (100, 100);
 		var bitmapData2 = new Bitmap (new BitmapData (100, 100, true, 0xFF0000FF));
@@ -431,19 +431,7 @@ class BitmapDataTest {
 		
 		Assert.isNotNull (exists);
 		
-	}
-	
-	
-	@Test public function getPixels () {
-		
-		// TODO: Confirm functionality
-		
-		var bitmapData = new BitmapData (100, 100);
-		var exists = bitmapData.getPixels;
-		
-		Assert.isNotNull (exists);
-		
-	}
+	}	
 	
 	
 	@Test public function getVector () {
@@ -588,7 +576,117 @@ class BitmapDataTest {
 		
 	}
 	
+	private static inline var TEST_WIDTH : Int = 100;
+	private static inline var TEST_HEIGHT : Int = 100;
 	
+	private function testGetSetPixels(color : Int, sourceAlpha: Bool, destAlpha: Bool) {
+		var bitmapData = new BitmapData (TEST_WIDTH, TEST_HEIGHT, sourceAlpha, color);
+		var pixels = bitmapData.getPixels (bitmapData.rect);
+		
+		Assert.areEqual (TEST_WIDTH * TEST_HEIGHT * 4, pixels.length);
+		
+		var expectedColor = color;
+		if (sourceAlpha) {
+			// TODO: Native behavior is different than the flash target here.
+			//	   The flash target premultiplies RGB by the alpha value.
+			//	   If the native behavior is changed, this test needs to be
+			//	   updated.
+			if ((expectedColor & 0xFF000000) == 0) {
+				expectedColor = 0;
+			}
+		}
+		else {
+			// Surfaces that don't support alpha return FF for the alpha value, so
+			// set our expected alpha to FF no matter what the initial value was
+			expectedColor |= 0xFF000000;
+		}
+		
+		var i : Int;
+		var pixel : Int;
+		pixels.position = 0;
+		
+		for (i in 0...Std.int(TEST_WIDTH * TEST_HEIGHT)) {
+			pixel = pixels.readInt();
+			Assert.isTrue (Math.abs (((expectedColor >> 24) & 0xFF) - ((pixel >> 24) & 0xFF)) <= 1);
+			Assert.isTrue (Math.abs (((expectedColor >> 16) & 0xFF) - ((pixel >> 16) & 0xFF)) <= 1);
+			Assert.isTrue (Math.abs (((expectedColor >> 8) & 0xFF) - ((pixel >> 8) & 0xFF)) <= 1);
+			Assert.isTrue (Math.abs (((expectedColor) & 0xFF) - ((pixel) & 0xFF)) <= 1);
+		}
+		
+		// Now run the same test again to make sure the source
+		// did not get changed by reading the first time.
+		pixels = bitmapData.getPixels (bitmapData.rect);
+		
+		Assert.areEqual (TEST_WIDTH * TEST_HEIGHT * 4, pixels.length);
+		
+		pixels.position = 0;
+		for (i in 0...Std.int(TEST_WIDTH * TEST_HEIGHT)) {
+			pixel = pixels.readInt();
+			Assert.isTrue (Math.abs (((expectedColor >> 24) & 0xFF) - ((pixel >> 24) & 0xFF)) <= 1);
+			Assert.isTrue (Math.abs (((expectedColor >> 16) & 0xFF) - ((pixel >> 16) & 0xFF)) <= 1);
+			Assert.isTrue (Math.abs (((expectedColor >> 8) & 0xFF) - ((pixel >> 8) & 0xFF)) <= 1);
+			Assert.isTrue (Math.abs (((expectedColor) & 0xFF) - ((pixel) & 0xFF)) <= 1);
+		}
+		
+		bitmapData = new BitmapData (TEST_WIDTH, TEST_HEIGHT, destAlpha);
+		
+		pixels.position = 0;
+		bitmapData.setPixels (bitmapData.rect, pixels);
+		
+		var pixel:Int = bitmapData.getPixel32 (1, 1);
+		
+		if (!destAlpha) {
+			expectedColor |= 0xFF000000;
+		}
+		
+		Assert.isTrue (Math.abs (((expectedColor >> 24) & 0xFF) - ((pixel >> 24) & 0xFF)) <= 1);
+		Assert.isTrue (Math.abs (((expectedColor >> 16) & 0xFF) - ((pixel >> 16) & 0xFF)) <= 1);
+		Assert.isTrue (Math.abs (((expectedColor >> 8) & 0xFF) - ((pixel >> 8) & 0xFF)) <= 1);
+		Assert.isTrue (Math.abs (((expectedColor) & 0xFF) - ((pixel) & 0xFF)) <= 1);
+	}
+	
+	// There are 6 combinations with an ARGB source that all must be tested:
+	//	Fill color: Fully transparent, semi-transparent, fully opaque
+	//   Dest bitmap: ARGB or RGB
+	// Test each of these using a different test function so we
+	// can easily tell which ones fails.
+	@Test public function testGetAndSetPixelsTransparentARGBToARGB() {
+		testGetSetPixels(0x00112233, true, true);
+	}
+	
+	@Test public function testGetAndSetPixelsSemiARGBToARGB() {
+		// TODO: Native targets do not match the flash behavior here.
+		//	   If the native target is changed to match flash, 
+		//	   testGetSetPixels() must be changed to match.
+		testGetSetPixels(0x80112233, true, true);
+	}
+	
+	@Test public function testGetAndSetPixelsOpqaueARGBToARGB() {
+		testGetSetPixels(0xFF112233, true, true);
+	}
+	
+	@Test public function testGetAndSetPixelsTransparentARGBToRGB() {
+		testGetSetPixels(0x00112233, true, false);
+	}
+	
+	@Test public function testGetAndSetPixelsSemiARGBToRGB() {
+		testGetSetPixels(0x80112233, true, false);
+	}
+	
+	@Test public function testGetAndSetPixelsOpqaueARGBToRGB() {
+		testGetSetPixels(0xFF112233, true, false);
+	}
+	
+	// There are also 2 combinations with an RGB source that must be tested:
+	//   Dest bitmap: ARGB or RGB
+	@Test public function testGetAndSetPixelsRGBToARGB() {
+		testGetSetPixels(0x112233, false, true);
+	}
+	
+	@Test public function testGetAndSetPixelsRGBToRGB() {
+		testGetSetPixels(0x112233, false, false);
+	}
+
 	/*
 	@Test public function testDispose () {
 		
@@ -675,28 +773,7 @@ class BitmapDataTest {
 		
 	}
 	
-	
-	@Test public function testGetAndSetPixels () {
 		
-		var color = 0xFFFF0000;
-		
-		var bitmapData = new BitmapData (100, 100, true, color);
-		var pixels = bitmapData.getPixels (bitmapData.rect);
-		
-		Assert.areEqual (100 * 100 * 4, pixels.length);
-		
-		bitmapData = new BitmapData (100, 100);
-		
-		pixels.position = 0;
-		bitmapData.setPixels (bitmapData.rect, pixels);
-		
-		var pixel = bitmapData.getPixel32 (1, 1);
-		
-		Assert.areEqual (StringTools.hex (0xFFFF0000, 8), StringTools.hex (pixel, 8));
-		
-	}
-	
-	
 	//@Test
 	public function testHitTest () {
 		

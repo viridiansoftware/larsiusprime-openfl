@@ -1,8 +1,8 @@
 package openfl.utils;
 
 
-#if (flash || openfl_next || js || display)
-typedef ArrayBuffer = lime.utils.ArrayBuffer;
+#if openfl_legacy
+typedef ArrayBuffer = openfl._legacy.utils.ArrayBuffer;
 #else
-typedef ArrayBuffer = openfl._v2.utils.ArrayBuffer;
+typedef ArrayBuffer = lime.utils.ArrayBuffer;
 #end

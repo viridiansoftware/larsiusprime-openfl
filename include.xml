@@ -4,12 +4,33 @@
 	<haxedef name="native" if="cpp || neko" />
 	<set name="native" if="cpp || neko" />
 	
-	<set name="openfl-next" value="1" if="next || openfl_next" />
+	<set name="lime-hybrid" value="1" if="hybrid || lime_hybrid" unless="web || display" />
+	<set name="openfl-legacy" value="1" if="legacy || openfl_legacy || lime-legacy || lime_legacy || v2 || lime-hybrid" unless="web || display" />
+	
+	<section if="web || display">
+		
+		<unset name="openfl-legacy" />
+		<unset name="lime-legacy" />
+		<unset name="lime-hybrid" />
+		<unset name="legacy" />
+		<unset name="hybrid" />
+		
+	</section>
+	
+	<set name="lime-legacy" value="1" if="openfl-legacy" unless="lime-hybrid" />
+	<set name="openfl-next" value="1" unless="openfl-legacy" />
+	
+	<haxedef name="disable-legacy-sound" if="ios lime-hybrid" />
+	
+	<haxedef name="openfl-legacy" if="openfl-legacy" unless="display" />
+	<haxedef name="lime-legacy" if="lime-legacy" unless="display" />
+	<haxedef name="lime-hybrid" if="lime-hybrid" unless="display" />
 	<haxedef name="openfl-next" if="openfl-next" />
-	<set name="lime-legacy" value="1" if="native || legacy || lime_legacy" unless="openfl-next" />
 	
 	<section if="openfl-next || webgl">
+		
 		<window stencil-buffer="true" />
+		
 	</section>
 	
 	<unset name="custom-backend" />
@@ -31,13 +52,15 @@
 		
 	</section>
 	
-	<haxelib name="lime" unless="create || native lime-legacy" />
-	<haxelib name="lime" if="display || rebuild" />
-	<!-- <include haxelib="aether" /> -->
-	<template path="templates" />
-
-	<haxelib name="hxtelemetry"/> <!-- TODO: prototype only, proper integration -->
-
+	<section unless="lime">
+		
+		<haxelib name="lime" unless="create || native lime-legacy" />
+		<haxelib name="lime" if="display || rebuild" />
+		
+		<template path="templates" />
+		<haxelib name="hxtelemetry"/> <!-- TODO: prototype only, proper integration -->
+	</section>
+	
 	<include haxelib="${custom-backend}" if="display custom-backend" />
 	<haxelib name="${custom-backend}" if="custom-backend" unless="display" />
 	
@@ -50,10 +73,10 @@
 			<set name="openfl" />
 			<haxeflag name="--remap" value="flash:openfl" />
 			
-			<section if="lime-legacy">
+			<section if="openfl-legacy">
 				
-				<include haxelib="lime" />
-				<template path="templates/v2" />
+				<include haxelib="lime" if="lime-legacy" />
+				<template path="templates/legacy" />
 				
 			</section>
 			
@@ -80,11 +103,9 @@
 	
 	<section if="setup">
 		
-		<!-- <haxelib name="aether" /> -->
 		<haxelib name="lime" />
 		<haxelib name="openfl-samples" />
 		<haxelib name="swf" />
-		<haxelib name="actuate" />
 		
 	</section>
 	

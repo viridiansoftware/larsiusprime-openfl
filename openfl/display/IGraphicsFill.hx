@@ -1,4 +1,4 @@
-package openfl.display; #if !flash #if (display || openfl_next || js)
+package openfl.display; #if !flash #if !openfl_legacy
 
 
 interface IGraphicsFill {
@@ -19,7 +19,7 @@ interface IGraphicsFill {
 
 
 #else
-typedef IGraphicsFill = openfl._v2.display.IGraphicsFill;
+typedef IGraphicsFill = openfl._legacy.display.IGraphicsFill;
 #end
 #else
 typedef IGraphicsFill = flash.display.IGraphicsFill;

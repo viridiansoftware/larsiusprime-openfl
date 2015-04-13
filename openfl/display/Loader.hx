@@ -1,4 +1,4 @@
-package openfl.display; #if !flash #if (display || openfl_next || js)
+package openfl.display; #if !flash #if !openfl_legacy
 
 
 import openfl.display.Bitmap;
@@ -13,8 +13,6 @@ import openfl.geom.Rectangle;
 import openfl.net.URLRequest;
 import openfl.system.LoaderContext;
 import openfl.utils.ByteArray;
-
-@:access(openfl.display.LoaderInfo)
 
 
 /**
@@ -80,6 +78,10 @@ import openfl.utils.ByteArray;
  * of the Loader object) from drawing to portions of the Stage outside of that
  * mask, as shown in the following code:</p>
  */
+
+@:access(openfl.display.LoaderInfo)
+
+
 class Loader extends Sprite {
 	
 	
@@ -616,7 +618,7 @@ class Loader extends Sprite {
 
 
 #else
-typedef Loader = openfl._v2.display.Loader;
+typedef Loader = openfl._legacy.display.Loader;
 #end
 #else
 typedef Loader = flash.display.Loader;

@@ -454,6 +454,55 @@ class CanvasGraphics {
 							setFill = true;
 							hasFill = true;
 						
+						case BeginGradientFill (type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio):
+							
+							closePath (false);
+							
+							var gradientFill = null;
+							
+							switch (type) {
+								
+								case RADIAL:
+									
+									if (matrix == null) matrix = new Matrix ();
+									var point = matrix.transformPoint (new Point (1638.4, 0));
+									gradientFill = context.createRadialGradient (matrix.tx, matrix.ty, 0, matrix.tx, matrix.ty, (point.x - matrix.tx) / 2);
+								
+								case LINEAR:
+									
+									var matrix = matrix != null ? matrix.clone () : new Matrix ();
+									matrix.tx -= matrix.a * 1638.4 / 2;
+									matrix.ty -= matrix.d * 1638.4 / 2;
+									
+									var point1 = matrix.transformPoint (new Point (0, 0));
+									var point2 = matrix.transformPoint (new Point (1638.4, 0));
+									
+									gradientFill = context.createLinearGradient (point1.x, point1.y, point2.x, point2.y);
+								
+							}
+							
+							for (i in 0...colors.length) {
+								
+								var rgb = colors[i];
+								var alpha = alphas[i];
+								var r = (rgb & 0xFF0000) >>> 16;
+								var g = (rgb & 0x00FF00) >>> 8;
+								var b = (rgb & 0x0000FF);
+								
+								var ratio = ratios[i] / 0xFF;
+								if (ratio < 0) ratio = 0;
+								if (ratio > 1) ratio = 1;
+								
+								gradientFill.addColorStop (ratio, "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")");
+								
+							}
+							
+							context.fillStyle = gradientFill;
+							
+							bitmapFill = null;
+							setFill = true;
+							hasFill = true;
+						
 						case CubicCurveTo (cx1, cy1, cx2, cy2, x, y):
 							
 							beginPatternFill (bitmapFill, bitmapRepeat);
@@ -572,6 +621,7 @@ class CanvasGraphics {
 							var useAlpha = (flags & Graphics.TILE_ALPHA) > 0;
 							var useRect = (flags & Graphics.TILE_RECT) > 0;
 							var useOrigin = (flags & Graphics.TILE_ORIGIN) > 0;
+							var useBlendAdd = (flags & Graphics.TILE_BLEND_ADD) > 0;
 							
 							if (useTransform) { useScale = false; useRotation = false; }
 							
@@ -602,6 +652,9 @@ class CanvasGraphics {
 							var surface:Dynamic;
 							sheet.__bitmap.__sync ();
 							surface = sheet.__bitmap.__image.src;
+
+							if (useBlendAdd)
+								context.globalCompositeOperation = "lighter";
 							
 							while (index < totalCount) {
 								
@@ -669,6 +722,9 @@ class CanvasGraphics {
 								index += numValues;
 								
 							}
+
+							if (useBlendAdd)
+								context.globalCompositeOperation = "source-over";
 						
 						case EndFill:
 							
@@ -693,7 +749,20 @@ class CanvasGraphics {
 								});
 								
 								context.miterLimit = (miterLimit == null ? 3 : miterLimit);
-								context.strokeStyle = (color == null ? "#000000" : "#" + StringTools.hex (color, 6));
+								
+								if (alpha == 1 || alpha == null) {
+								
+									context.strokeStyle = (color == null ? "#000000" : "#" + StringTools.hex (color & 0x00FFFFFF, 6));
+								
+								} else {
+									
+									var r = (color & 0xFF0000) >>> 16;
+									var g = (color & 0x00FF00) >>> 8;
+									var b = (color & 0x0000FF);
+									
+									context.strokeStyle = (color == null ? "#000000" : "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")");
+									
+								}
 								
 								hasStroke = true;
 								

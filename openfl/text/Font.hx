@@ -1,14 +1,36 @@
-package openfl.text; #if !flash #if (display || openfl_next || js)
+package openfl.text; #if !flash #if !openfl_legacy
 
 
+import lime.text.Font in LimeFont;
 import openfl.utils.ByteArray;
 
 
-class Font extends lime.graphics.Font {
+/**
+ * The Font class is used to manage embedded fonts in SWF files. Embedded
+ * fonts are represented as a subclass of the Font class. The Font class is
+ * currently useful only to find out information about embedded fonts; you
+ * cannot alter a font by using this class. You cannot use the Font class to
+ * load external fonts, or to create an instance of a Font object by itself.
+ * Use the Font class as an abstract base class.
+ */
+class Font extends LimeFont {
 	
 	
-	//public var fontName:String;
+	/**
+	 * The name of an embedded font.
+	 */
+	public var fontName (get, set):String;
+	
+	/**
+	 * The style of the font. This value can be any of the values defined in the
+	 * FontStyle class.
+	 */
 	public var fontStyle:FontStyle;
+	
+	/**
+	 * The type of the font. This value can be any of the constants defined in
+	 * the FontType class.
+	 */
 	public var fontType:FontType;
 	
 	@:noCompletion private static var __registeredFonts = new Array<Font> ();
@@ -21,6 +43,19 @@ class Font extends lime.graphics.Font {
 	}
 	
 	
+	/**
+	 * Specifies whether to provide a list of the currently available embedded
+	 * fonts.
+	 * 
+	 * @param enumerateDeviceFonts Indicates whether you want to limit the list
+	 *                             to only the currently available embedded
+	 *                             fonts. If this is set to <code>true</code>
+	 *                             then a list of all fonts, both device fonts
+	 *                             and embedded fonts, is returned. If this is
+	 *                             set to <code>false</code> then only a list of
+	 *                             embedded fonts is returned.
+	 * @return A list of available fonts as an array of Font objects.
+	 */
 	public static function enumerateFonts (enumerateDeviceFonts:Bool = false):Array<Font> {
 		
 		return [];
@@ -31,8 +66,13 @@ class Font extends lime.graphics.Font {
 	public static function fromBytes (bytes:ByteArray):Font {
 		
 		var font = new Font ();
-		// TODO font.__fromBytes (bytes);
+		font.__fromBytes (bytes);
+		
+		#if (cpp || neko || nodejs)
+		return (font.src != null) ? font : null;
+		#else
 		return font;
+		#end
 		
 	}
 	
@@ -41,11 +81,20 @@ class Font extends lime.graphics.Font {
 		
 		var font = new Font ();
 		font.__fromFile (path);
+		
+		#if (cpp || neko || nodejs)
+		return (font.src != null) ? font : null;
+		#else
 		return font;
+		#end
 		
 	}
 	
 	
+	/**
+	 * Registers a font class in the global font list.
+	 * 
+	 */
 	public static function registerFont (font:Class<Dynamic>) {
 		
 		var instance = cast (Type.createInstance (font, []), Font);
@@ -61,6 +110,37 @@ class Font extends lime.graphics.Font {
 			__registeredFonts.push (instance);
 			
 		}
+		
+	}
+	
+	
+	@:noCompletion private static function __fromLimeFont (value:LimeFont):Font {
+		
+		var font = new Font ();
+		font.name = value.name;
+		font.src = value.src;
+		return font;
+		
+	}
+	
+	
+	
+	
+	// Get & Set Methods
+	
+	
+	
+	
+	private inline function get_fontName ():String {
+		
+		return name;
+		
+	}
+	
+	
+	private inline function set_fontName (value:String):String {
+		
+		return name = value;
 		
 	}
 	
@@ -323,7 +403,7 @@ typedef GlyphData = {
 
 
 #else
-typedef Font = openfl._v2.text.Font;
+typedef Font = openfl._legacy.text.Font;
 #end
 #else
 typedef Font = flash.text.Font;

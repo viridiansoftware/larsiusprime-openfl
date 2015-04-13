@@ -1,10 +1,11 @@
-package openfl.display; #if !flash #if (display || openfl_next || js)
+package openfl.display; #if !flash #if !openfl_legacy
 
 
 import openfl._internal.renderer.opengl.utils.FilterTexture;
 import openfl.errors.ArgumentError;
 import openfl._internal.renderer.opengl.utils.GraphicsRenderer;
 import openfl._internal.renderer.opengl.utils.DrawPath;
+import openfl.display.GraphicsPathCommand;
 import openfl.display.Tilesheet;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
@@ -46,14 +47,16 @@ class Graphics {
 	
 	@:noCompletion private var __bounds:Rectangle;
 	@:noCompletion private var __commands:Array<DrawCommand> = [];
-	@:noCompletion private var __dirty:Bool = true;
+	@:noCompletion private var __dirty(default, set):Bool = true;
 	@:noCompletion private var __glStack:Array<GLStack> = [];
 	@:noCompletion private var __drawPaths:Array<DrawPath>;
 	@:noCompletion private var __halfStrokeWidth:Float;
 	@:noCompletion private var __positionX:Float;
 	@:noCompletion private var __positionY:Float;
+	@:noCompletion private var __transformDirty:Bool;
 	@:noCompletion private var __visible:Bool = true;
 	@:noCompletion private var __cachedTexture:FilterTexture;
+	@:noCompletion private var __owner:DisplayObject;
 	
 	#if js
 	@:noCompletion private var __canvas:CanvasElement;
@@ -68,6 +71,9 @@ class Graphics {
 		__positionX = 0;
 		__positionY = 0;
 		
+		#if js
+		moveTo( 0, 0);
+		#end
 	}
 	
 	
@@ -207,7 +213,18 @@ class Graphics {
 	 */
 	public function beginGradientFill (type:GradientType, colors:Array<Dynamic>, alphas:Array<Dynamic>, ratios:Array<Dynamic>, matrix:Matrix = null, spreadMethod:Null<SpreadMethod> = null, interpolationMethod:Null<InterpolationMethod> = null, focalPointRatio:Null<Float> = null):Void {
 		
-		openfl.Lib.notImplemented ("Graphics.beginGradientFill");
+		__commands.push (BeginGradientFill (type, colors, alphas, ratios, matrix, spreadMethod, interpolationMethod, focalPointRatio));
+		
+		for (alpha in alphas) {
+			
+			if (alpha > 0) {
+				
+				__visible = true;
+				break;
+				
+			}
+			
+		}
 		
 	}
 	
@@ -225,12 +242,16 @@ class Graphics {
 		if (__bounds != null) {
 			
 			__dirty = true;
+			__transformDirty = true;
 			__bounds = null;
 			
 		}
 		
 		__visible = false;
 		
+		#if js
+		moveTo( 0, 0);
+		#end
 	}
 	
 	
@@ -242,6 +263,7 @@ class Graphics {
 		__halfStrokeWidth = sourceGraphics.__halfStrokeWidth;
 		__positionX = sourceGraphics.__positionX;
 		__positionY = sourceGraphics.__positionY;
+		__transformDirty = true;
 		__visible = sourceGraphics.__visible;
 		
 	}
@@ -447,7 +469,37 @@ class Graphics {
 	 */
 	public function drawPath (commands:Vector<Int>, data:Vector<Float>, winding:GraphicsPathWinding = null):Void {
 		
-		openfl.Lib.notImplemented ("Graphics.drawPath");
+		var dataIndex = 0;
+		
+		for (command in commands) {
+			
+			switch (command) {
+				
+				case GraphicsPathCommand.MOVE_TO:
+					
+					moveTo (data[dataIndex], data[dataIndex + 1]);	
+					dataIndex += 2;
+					
+				case GraphicsPathCommand.LINE_TO:
+					
+					lineTo (data[dataIndex], data[dataIndex + 1]);
+					dataIndex += 2;
+					
+				case GraphicsPathCommand.CURVE_TO:
+					
+					curveTo (data[dataIndex], data[dataIndex + 1], data[dataIndex + 2], data[dataIndex + 3]);
+					dataIndex += 4;
+					
+				case GraphicsPathCommand.CUBIC_CURVE_TO:
+					
+					cubicCurveTo (data[dataIndex], data[dataIndex + 1], data[dataIndex + 2], data[dataIndex + 3], data[dataIndex + 4], data[dataIndex + 5]);
+					dataIndex += 6;
+				
+				default:
+				
+			}
+			
+		}
 		
 	}
 	
@@ -950,6 +1002,7 @@ class Graphics {
 		if (__bounds == null) {
 			
 			__bounds = new Rectangle (x, y, 0, 0);
+			__transformDirty = true;
 			return;
 			
 		}
@@ -958,6 +1011,7 @@ class Graphics {
 			
 			__bounds.width += __bounds.x - x;
 			__bounds.x = x;
+			__transformDirty = true;
 			
 		}
 		
@@ -965,6 +1019,7 @@ class Graphics {
 			
 			__bounds.height += __bounds.y - y;
 			__bounds.y = y;
+			__transformDirty = true;
 			
 		}
 		
@@ -983,6 +1038,14 @@ class Graphics {
 	}
 	
 	
+	@:noCompletion private function set___dirty (value:Bool):Bool {
+		if (value && __owner != null) {
+			@:privateAccess __owner.__setRenderDirty();
+		}
+		return __dirty = value;
+	}
+	
+	
 }
 
 
@@ -990,6 +1053,7 @@ class Graphics {
 	
 	BeginBitmapFill (bitmap:BitmapData, matrix:Matrix, repeat:Bool, smooth:Bool);
 	BeginFill (color:Int, alpha:Float);
+	BeginGradientFill (type:GradientType, colors:Array<Dynamic>, alphas:Array<Dynamic>, ratios:Array<Dynamic>, matrix:Matrix, spreadMethod:Null<SpreadMethod>, interpolationMethod:Null<InterpolationMethod>, focalPointRatio:Null<Float>);
 	CubicCurveTo (controlX1:Float, controlY1:Float, controlX2:Float, controlY2:Float, anchorX:Float, anchorY:Float);
 	CurveTo (controlX:Float, controlY:Float, anchorX:Float, anchorY:Float);
 	DrawCircle (x:Float, y:Float, radius:Float);
@@ -1002,12 +1066,14 @@ class Graphics {
 	LineStyle (thickness:Null<Float>, color:Null<Int>, alpha:Null<Float>, pixelHinting:Null<Bool>, scaleMode:LineScaleMode, caps:CapsStyle, joints:JointStyle, miterLimit:Null<Float>);
 	LineTo (x:Float, y:Float);
 	MoveTo (x:Float, y:Float);
+	DrawPathC(commands:Vector<Int>, data:Vector<Float>, winding:GraphicsPathWinding);
+	OverrideMatrix(matrix:Matrix);
 	
 }
 
 
 #else
-typedef Graphics = openfl._v2.display.Graphics;
+typedef Graphics = openfl._legacy.display.Graphics;
 #end
 #else
 
@@ -1113,22 +1179,25 @@ abstract Graphics(flash.display.Graphics) from flash.display.Graphics to flash.d
 					tile = sheet.__tileRects[tileID];
 					tileUV = sheet.__tileUVs[tileID];
 					tilePoint = sheet.__centerPoints[tileID];
-				}
-				else if (useRect)
-				{
+					
+				} else if (useRect) {
+					
 					tile = sheet.__rectTile;
-					tile.setTo(tileData[index + 2], tileData[index + 3], tileData[index + 4], tileData[index + 5]);
+					tile.setTo (tileData[index + 2], tileData[index + 3], tileData[index + 4], tileData[index + 5]);
 					tileUV = sheet.__rectUV;
-					tileUV.setTo(tile.x / sheet.__bitmap.width, tile.y / sheet.__bitmap.height, tile.right / sheet.__bitmap.width, tile.bottom / sheet.__bitmap.height);
+					tileUV.setTo (tile.x / sheet.__bitmap.width, tile.y / sheet.__bitmap.height, tile.right / sheet.__bitmap.width, tile.bottom / sheet.__bitmap.height);
 					tilePoint = sheet.__point;
-					if (useOrigin)
-					{
-						tilePoint.setTo(tileData[index + 6] / tile.width, tileData[index + 7] / tile.height);
+					
+					if (useOrigin) {
+						
+						tilePoint.setTo (tileData[index + 6] / tile.width, tileData[index + 7] / tile.height);
+						
+					} else {
+						
+						tilePoint.setTo (0, 0);
+						
 					}
-					else
-					{
-						tilePoint.setTo(0, 0);
-					}
+					
 				}
 				
 				if (useTransform) {
@@ -1161,22 +1230,28 @@ abstract Graphics(flash.display.Graphics) from flash.display.Graphics to flash.d
 					
 					if (rotation != 0) {
 						
-						var kx = tilePoint.x * tileWidth;
-						var ky = tilePoint.y * tileHeight;
-						var akx = (1 - tilePoint.x) * tileWidth;
-						var aky = (1 - tilePoint.y) * tileHeight;
 						var ca = Math.cos (rotation);
 						var sa = Math.sin (rotation);
-						var xc = kx * sa, xs = kx * ca, yc = ky * sa, ys = ky * ca;
-						var axc = akx * sa, axs = akx * ca, ayc = aky * sa, ays = aky * ca;
-						vertices[offset8] = x - (xc + ys);
-						vertices[offset8 + 1] = y - (-xs + yc);
-						vertices[offset8 + 2] = x + axc - ys;
-						vertices[offset8 + 3] = y - (axs + yc);
-						vertices[offset8 + 4] = x - (xc - ays);
-						vertices[offset8 + 5] = y + xs + ayc;
-						vertices[offset8 + 6] = x + axc + ays;
-						vertices[offset8 + 7] = y + (-axs + ayc);
+						var tw = tile.width;
+						var th = tile.height;
+						var t0 = ca;
+						var t1 = sa;
+						var t2 = -sa;
+						var t3 = ca;
+						var ox = tilePoint.x * tw;
+						var oy = tilePoint.y * th;
+						var ox_ = ox * t0 + oy * t2;
+						oy = ox * t1 + oy * t3;
+						x -= ox_;
+						y -= oy;
+						vertices[offset8] = x;
+						vertices[offset8 + 1] = y;
+						vertices[offset8 + 2] = x + tw * t0;
+						vertices[offset8 + 3] = y + tw * t1;
+						vertices[offset8 + 4] = x + th * t2;
+						vertices[offset8 + 5] = y + th * t3;
+						vertices[offset8 + 6] = x + tw * t0 + th * t2;
+						vertices[offset8 + 7] = y + tw * t1 + th * t3;
 						
 					} else {
 						

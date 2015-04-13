@@ -1,6 +1,6 @@
 package openfl.filesystem;
 
 
-#if ((cpp || neko) && !openfl_next)
-typedef StorageVolumeInfo = openfl._v2.filesystem.StorageVolumeInfo;
+#if openfl_legacy
+typedef StorageVolumeInfo = openfl._legacy.filesystem.StorageVolumeInfo;
 #end
