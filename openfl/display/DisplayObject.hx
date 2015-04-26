@@ -1,6 +1,7 @@
 package openfl.display; #if !flash #if !openfl_legacy
 
 
+import lime.ui.MouseCursor;
 import openfl._internal.renderer.canvas.CanvasGraphics;
 import openfl._internal.renderer.canvas.CanvasShape;
 import openfl._internal.renderer.dom.DOMShape;
@@ -19,7 +20,7 @@ import openfl.geom.Rectangle;
 import openfl.geom.Transform;
 import openfl.Lib;
 
-#if js
+#if (js && html5)
 import js.html.CanvasElement;
 import js.html.CanvasRenderingContext2D;
 import js.html.CSSStyleDeclaration;
@@ -740,8 +741,9 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable {
 	@:noCompletion private var __worldZ:Int;
 	@:noCompletion private var __x:Float;
 	@:noCompletion private var __y:Float;
+	@:noCompletion private var __cacheAsBitmap:Bool = false;
 	
-	#if js
+	#if (js && html5)
 	@:noCompletion private var __canvas:CanvasElement;
 	@:noCompletion private var __context:CanvasRenderingContext2D;
 	@:noCompletion private var __style:CSSStyleDeclaration;
@@ -1010,9 +1012,16 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable {
 	}
 	
 	
-	@:noCompletion private function __getInteractive (stack:Array<DisplayObject>):Void {
+	@:noCompletion private function __getCursor ():MouseCursor {
 		
+		return null;
 		
+	}
+	
+	
+	@:noCompletion private function __getInteractive (stack:Array<DisplayObject>):Bool {
+		
+		return false;
 		
 	}
 	

@@ -36,7 +36,7 @@ import openfl.text.TextField;
 import openfl.ui.Keyboard;
 import openfl.ui.KeyLocation;
 
-#if js
+#if (js && html5)
 import js.html.CanvasElement;
 import js.html.DivElement;
 import js.html.Element;
@@ -529,9 +529,9 @@ class Stage extends DisplayObjectContainer implements IModule {
 	@:noCompletion private var __fullscreen:Bool;
 	@:noCompletion private var __invalidated:Bool;
 	@:noCompletion private var __lastClickTime:Int;
-	@:noCompletion private var __mouseOutStack = [];
-	@:noCompletion private var __mouseX:Float = 0;
-	@:noCompletion private var __mouseY:Float = 0;
+	@:noCompletion private var __mouseOutStack:Array<DisplayObject>;
+	@:noCompletion private var __mouseX:Float;
+	@:noCompletion private var __mouseY:Float;
 	@:noCompletion private var __originalWidth:Int;
 	@:noCompletion private var __originalHeight:Int;
 	@:noCompletion private var __renderer:AbstractRenderer;
@@ -540,7 +540,7 @@ class Stage extends DisplayObjectContainer implements IModule {
 	@:noCompletion private var __transparent:Bool;
 	@:noCompletion private var __wasDirty:Bool;
 	
-	#if js
+	#if (js && html5)
 	//@:noCompletion private var __div:DivElement;
 	//@:noCompletion private var __element:HtmlElement;
 	#if stats
@@ -569,7 +569,8 @@ class Stage extends DisplayObjectContainer implements IModule {
 		__displayState = NORMAL;
 		__mouseX = 0;
 		__mouseY = 0;
-		
+		__lastClickTime = 0;
+
 		stageWidth = width;
 		stageHeight = height;
 		
@@ -584,6 +585,7 @@ class Stage extends DisplayObjectContainer implements IModule {
 		
 		__clearBeforeRender = true;
 		__stack = [];
+		__mouseOutStack = [];
 		
 		stage3Ds = new Vector ();
 		stage3Ds.push (new Stage3D ());
@@ -604,7 +606,9 @@ class Stage extends DisplayObjectContainer implements IModule {
 			
 			case OPENGL (gl):
 				
+				#if !disable_cffi
 				__renderer = new GLRenderer (stageWidth, stageHeight, gl);
+				#end
 			
 			case CANVAS (context):
 				
@@ -815,6 +819,13 @@ class Stage extends DisplayObjectContainer implements IModule {
 	}
 	
 	
+	public function onWindowEnter ():Void {
+		
+		
+		
+	}
+	
+	
 	public function onWindowFocusIn ():Void {
 		
 		
@@ -832,6 +843,13 @@ class Stage extends DisplayObjectContainer implements IModule {
 	public function onWindowFullscreen ():Void {
 		
 		
+		
+	}
+	
+	
+	public function onWindowLeave ():Void {
+		
+		dispatchEvent (new Event (Event.MOUSE_LEAVE));
 		
 	}
 	
@@ -1012,9 +1030,15 @@ class Stage extends DisplayObjectContainer implements IModule {
 	}
 	
 	
-	@:noCompletion private override function __getInteractive (stack:Array<DisplayObject>):Void {
+	@:noCompletion private override function __getInteractive (stack:Array<DisplayObject>):Bool {
 		
-		stack.push (this);
+		if (stack != null) {
+			
+			stack.push (this);
+			
+		}
+		
+		return true;
 		
 	}
 	
@@ -1103,6 +1127,12 @@ class Stage extends DisplayObjectContainer implements IModule {
 			
 		}
 		
+		if (type == MouseEvent.MOUSE_DOWN) {
+			
+			focus = target;
+			
+		}
+		
 		__fireEvent (MouseEvent.__create (type, button, __mouseX, __mouseY, (target == this ? targetPoint : target.globalToLocal (targetPoint)), target), stack);
 		
 		var clickType = switch (type) {
@@ -1136,49 +1166,22 @@ class Stage extends DisplayObjectContainer implements IModule {
 			
 		}
 		
-		if (Std.is (target, Sprite)) {
+		var cursor = null;
+		
+		for (target in stack) {
 			
-			var targetSprite:Sprite = cast target;
+			cursor = target.__getCursor ();
 			
-			if (targetSprite.buttonMode && targetSprite.useHandCursor) {
+			if (cursor != null) {
 				
-				Mouse.cursor = POINTER;
-				
-			} else {
-				
-				Mouse.cursor = ARROW;
+				Mouse.cursor = cursor;
+				break;
 				
 			}
 			
-		} else if (Std.is (target, SimpleButton)) {
-			
-			var targetButton:SimpleButton = cast target;
-			
-			if (targetButton.useHandCursor) {
-				
-				Mouse.cursor = POINTER;
-				
-			} else {
-				
-				Mouse.cursor = ARROW;
-				
-			}
-			
-		} else if (Std.is (target, TextField)) {
-			
-			var targetTextField:TextField = cast target;
-			
-			if (targetTextField.type == INPUT) {
-				
-				Mouse.cursor = TEXT;
-				
-			} else {
-				
-				Mouse.cursor = ARROW;
-				
-			}
-			
-		} else {
+		}
+		
+		if (cursor == null) {
 			
 			Mouse.cursor = ARROW;
 			
@@ -1509,7 +1512,7 @@ class Stage extends DisplayObjectContainer implements IModule {
 	
 	
 	
-	#if js
+	#if (js && html5)
 	@:noCompletion private function canvas_onContextLost (event:js.html.webgl.ContextEvent):Void {
 		
 		//__glContextLost = true;
