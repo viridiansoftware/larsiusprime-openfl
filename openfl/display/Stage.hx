@@ -897,8 +897,16 @@ class Stage extends DisplayObjectContainer implements IModule {
 		if (__rendering) return;
 		__rendering = true;
 		
+#if hxtelemetry
+    __broadcast (new Event ("HXT_BEFORE_FRAME"), true);
+    hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.USER);
+#end
 		__broadcast (new Event (Event.ENTER_FRAME), true);
+#if hxtelemetry
+    hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.USER);
 		
+		hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
+#end
 		if (__invalidated) {
 			
 			__invalidated = false;
@@ -915,6 +923,9 @@ class Stage extends DisplayObjectContainer implements IModule {
 			
 		}
 		
+#if hxtelemetry
+		hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
+#end
 		__rendering = false;
 		
 	}

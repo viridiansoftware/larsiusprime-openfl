@@ -1070,13 +1070,19 @@ class Stage extends DisplayObjectContainer {
 		}
 
 		if (sendEnterFrame) {
+#if hxtelemetry
 			__broadcast (new Event ("HXT_BEFORE_FRAME"));
 			hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.USER);
+#end
 			__broadcast (new Event (Event.ENTER_FRAME));
+#if hxtelemetry
 			hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.USER);
+#end
 		}
 		
+#if hxtelemetry
 		hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
+#end
 		if (__invalid) {
 			
 			__invalid = false;
@@ -1085,8 +1091,9 @@ class Stage extends DisplayObjectContainer {
 		}
 		
 		lime_render_stage (__handle);
+#if hxtelemetry
 		hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
-		
+#end
 	}
 	
 	

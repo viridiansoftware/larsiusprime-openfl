@@ -58,7 +58,6 @@
 		<haxelib name="lime" if="display || rebuild" />
 		
 		<template path="templates" />
-		<haxelib name="hxtelemetry"/> <!-- TODO: prototype only, proper integration -->
 	</section>
 	
 	<include haxelib="${custom-backend}" if="display custom-backend" />
