@@ -145,6 +145,11 @@ class Stage extends DisplayObjectContainer {
 		#if(cpp && (safeMode || debug))
  		untyped __global__.__hxcpp_set_critical_error_handler( function(message:String) { throw message; } );
  		#end
+
+#if (cpp && hxtelemetry)
+    Telemetry.start();
+#end
+
 	}
 	
 	
@@ -1070,18 +1075,18 @@ class Stage extends DisplayObjectContainer {
 		}
 
 		if (sendEnterFrame) {
-#if hxtelemetry
-			__broadcast (new Event ("HXT_BEFORE_FRAME"));
-			hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.USER);
+#if (cpp && hxtelemetry)
+			Telemetry.hxt.advance_frame();
+			Telemetry.start_timing(hxtelemetry.HxTelemetry.Timing.USER);
 #end
 			__broadcast (new Event (Event.ENTER_FRAME));
-#if hxtelemetry
-			hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.USER);
+#if (cpp && hxtelemetry)
+			Telemetry.end_timing(hxtelemetry.HxTelemetry.Timing.USER);
 #end
 		}
 		
-#if hxtelemetry
-		hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
+#if (cpp && hxtelemetry)
+		Telemetry.start_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
 #end
 		if (__invalid) {
 			
@@ -1091,8 +1096,8 @@ class Stage extends DisplayObjectContainer {
 		}
 		
 		lime_render_stage (__handle);
-#if hxtelemetry
-		hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
+#if (cpp && hxtelemetry)
+		Telemetry.end_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
 #end
 	}
 	
