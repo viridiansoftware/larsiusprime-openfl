@@ -369,6 +369,8 @@ class Stage extends DisplayObjectContainer {
 	#end
 	@:noCompletion private function __doProcessStageEvent (event:Dynamic):Float {
 		
+    Telemetry.start_timing(Telemetry.Timing.EVENT);
+
 		var result = 0.0;
 		var type = Std.int (Reflect.field (event, "type"));
 		
@@ -544,6 +546,8 @@ class Stage extends DisplayObjectContainer {
 			Lib.rethrow (error);
 			
 		}
+
+    Telemetry.end_timing(Telemetry.Timing.EVENT);
 		
 		result = __updateNextWake ();
 		return result;
@@ -1075,30 +1079,20 @@ class Stage extends DisplayObjectContainer {
 		}
 
 		if (sendEnterFrame) {
-#if (cpp && hxtelemetry)
-			Telemetry.hxt.advance_frame();
-			Telemetry.start_timing(hxtelemetry.HxTelemetry.Timing.USER);
-#end
+			Telemetry.advance_frame();
 			__broadcast (new Event (Event.ENTER_FRAME));
-#if (cpp && hxtelemetry)
-			Telemetry.end_timing(hxtelemetry.HxTelemetry.Timing.USER);
-#end
 		}
 		
-#if (cpp && hxtelemetry)
-		Telemetry.start_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
-#end
 		if (__invalid) {
-			
 			__invalid = false;
-			__broadcast (new Event (Event.RENDER));
-			
+			__broadcast (new Event (Event.RENDER));			
 		}
-		
+
+    var stack:String = Telemetry.unwind_stack();
+		Telemetry.start_timing(Telemetry.Timing.RENDER);
 		lime_render_stage (__handle);
-#if (cpp && hxtelemetry)
-		Telemetry.end_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
-#end
+		Telemetry.end_timing(Telemetry.Timing.RENDER);
+    Telemetry.rewind_stack(stack);
 	}
 	
 	
