@@ -23,14 +23,20 @@ class Telemetry {
   public static var hxt:HxTelemetry;
 #end
 
-  public inline static function start(host:String="localhost",
-                                        port:String="7934"):Void {
+  public static var config = {
+    allocations:true,
+    host:"localhost",
+    port:"7934",
+    app_name:"OpenFL App",
+  }
+
+  public inline static function start():Void {
 #if (cpp && hxtelemetry)
     trace("Starting telemetry...");
     var cfg = new hxtelemetry.HxTelemetry.Config();
-    //cfg.allocations = false;
-    cfg.host = host;
-    cfg.app_name = "OpenFL App";
+    cfg.allocations = config.allocations;
+    cfg.host = config.host;
+    cfg.app_name = config.app_name;
     cfg.activity_descriptors = Timing.OPENFL_DESCRIPTORS;
     hxt = new hxtelemetry.HxTelemetry(cfg);
 #end

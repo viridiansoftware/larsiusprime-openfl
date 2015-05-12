@@ -1087,7 +1087,8 @@ class Stage extends DisplayObjectContainer {
 			__invalid = false;
 			__broadcast (new Event (Event.RENDER));			
 		}
-
+		
+    // TODO: Include the broadcast or not?
     var stack:String = Telemetry.unwind_stack();
 		Telemetry.start_timing(Telemetry.Timing.RENDER);
 		lime_render_stage (__handle);
