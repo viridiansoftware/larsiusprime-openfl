@@ -110,6 +110,8 @@ class Stage extends DisplayObjectContainer {
 	
 	public function new (handle:Dynamic, width:Int, height:Int) {
 		
+    Telemetry.start();
+
 		super (handle, "Stage");
 		
 		__mouseOverObjects = [];
@@ -145,10 +147,6 @@ class Stage extends DisplayObjectContainer {
 		#if(cpp && (safeMode || debug))
  		untyped __global__.__hxcpp_set_critical_error_handler( function(message:String) { throw message; } );
  		#end
-
-#if (cpp && hxtelemetry)
-    Telemetry.start();
-#end
 
 	}
 	

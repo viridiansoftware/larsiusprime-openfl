@@ -550,6 +550,8 @@ class Stage extends DisplayObjectContainer implements IModule {
 	
 	
 	public function new (width:Int, height:Int, color:Null<Int> = null) {
+
+    Telemetry.start();
 		
 		super ();
 		
@@ -896,17 +898,10 @@ class Stage extends DisplayObjectContainer implements IModule {
 		
 		if (__rendering) return;
 		__rendering = true;
-		
-#if hxtelemetry
-    __broadcast (new Event ("HXT_BEFORE_FRAME"), true);
-    hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.USER);
-#end
+
+    Telemetry.advance_frame();
 		__broadcast (new Event (Event.ENTER_FRAME), true);
-#if hxtelemetry
-    hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.USER);
-		
-		hxtelemetry.Singleton.start_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
-#end
+
 		if (__invalidated) {
 			
 			__invalidated = false;
@@ -914,6 +909,8 @@ class Stage extends DisplayObjectContainer implements IModule {
 			
 		}
 		
+    var stack:String = Telemetry.unwind_stack();
+		Telemetry.start_timing(Telemetry.Timing.RENDER);
 		__renderable = true;
 		__update (false, true);
 		
@@ -923,9 +920,8 @@ class Stage extends DisplayObjectContainer implements IModule {
 			
 		}
 		
-#if hxtelemetry
-		hxtelemetry.Singleton.end_timing(hxtelemetry.HxTelemetry.Timing.RENDER);
-#end
+		Telemetry.end_timing(Telemetry.Timing.RENDER);
+    Telemetry.rewind_stack(stack);
 		__rendering = false;
 		
 	}
