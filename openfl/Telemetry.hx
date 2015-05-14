@@ -3,6 +3,12 @@ package openfl;
 // Currently telemetty is only available in CPP
 #if (cpp && hxtelemetry)
 import hxtelemetry.HxTelemetry;
+#else
+typedef ActivityDescriptor = {
+  name:String,
+  description:String,
+  color:Int
+}
 #end
 
 class Timing {
@@ -45,7 +51,7 @@ class Telemetry {
   public static inline function advance_frame():Void
   {
 #if (cpp && hxtelemetry)
-    hxt.advance_frame();
+    if (hxt!=null) hxt.advance_frame();
 #end
   }
 
@@ -53,7 +59,7 @@ class Telemetry {
   {
     // TODO: compatibility layer /w Adobe Scout custom metrics?
 #if (cpp && hxtelemetry)
-    hxt.start_timing(name);
+    if (hxt!=null) hxt.start_timing(name);
 #end
   }
 
@@ -61,21 +67,24 @@ class Telemetry {
   {
     // TODO: compatibility layer /w Adobe Scout custom metrics?
 #if (cpp && hxtelemetry)
-    hxt.end_timing(name);
+    if (hxt!=null) hxt.end_timing(name);
 #end
   }
 
   public static inline function unwind_stack():String
   {
 #if (cpp && hxtelemetry)
+    if (hxt==null) return "";
     return hxt.unwind_stack();
+#else
+    return "";
 #end
   }
 
   public static inline function rewind_stack(stack:String):Void
   {
 #if (cpp && hxtelemetry)
-    hxt.rewind_stack(stack);
+    if (hxt!=null) hxt.rewind_stack(stack);
 #end
   }
 
