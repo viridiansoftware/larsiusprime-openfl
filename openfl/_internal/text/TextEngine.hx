@@ -770,6 +770,7 @@ class TextEngine {
 					
 					layoutGroup.offsetY = offsetY;
 					layoutGroup.offsetX = offsetX;
+					layoutGroup.lineIndex++;
 					
 					offsetY += heightValue;
 					lineIndex++;
@@ -866,7 +867,7 @@ class TextEngine {
 						layoutGroup.height = heightValue;
 						layoutGroups.push (layoutGroup);
 						
-						offsetX = widthValue + spaceWidth;
+						offsetX += widthValue + spaceWidth;
 						marginRight = spaceWidth;
 						
 						wrap = false;
