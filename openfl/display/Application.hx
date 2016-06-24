@@ -59,7 +59,37 @@ class Application extends LimeApplication {
 			
 		}
 		
+		#if crashdumper
+		
+		lime.app.Event.dispatchErrorEventCallback = __dispatchErrorEvent;
+		
+		#end
 	}
 	
+	#if crashdumper
 	
+	private function __dispatchErrorEvent( msg:Dynamic) :Void {
+		
+		var err:Dynamic = null;
+		if (msg != null) {
+			
+			err = msg;
+			
+			if (Std.is(msg, String)) {
+				
+				err = new openfl.errors.Error("UNCAUGHT ERROR : " + msg, 0);
+				
+			}
+			
+		}
+		
+		if (openfl.Lib.current != null && openfl.Lib.current.loaderInfo != null && openfl.Lib.current.loaderInfo.uncaughtErrorEvents != null) {
+			
+			openfl.Lib.current.loaderInfo.uncaughtErrorEvents.dispatchEvent(new openfl.events.UncaughtErrorEvent(openfl.events.UncaughtErrorEvent.UNCAUGHT_ERROR, true, true, err));
+			
+		}
+		
+	}
+	
+	#end
 }
