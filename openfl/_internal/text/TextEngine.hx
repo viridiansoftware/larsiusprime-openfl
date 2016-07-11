@@ -464,8 +464,6 @@ class TextEngine {
 		var cr = Unifill.uIndexOf (text, "\n", startIndex);
 		var lf = Unifill.uIndexOf (text, "\r", startIndex);
 		
-		Sys.println("cr: " + cr + " lf: " + lf);
-		
 		if (cr == -1) return lf;
 		if (lf == -1) return cr;
 		
@@ -765,12 +763,7 @@ class TextEngine {
 		
 		inline function breakLongWords (endIndex:Int):Void {
 			
-			Sys.println(text);
-			Sys.println("breakLongWords : " + endIndex);
-			
 			var tempWidth = getTextWidth(Unifill.uSubstring(text, textIndex, endIndex));
-			
-			Sys.println("tempWidth = " + tempWidth);
 			
 			while (offsetX + tempWidth > width - 2) {
 				
@@ -1057,8 +1050,6 @@ class TextEngine {
 		for (lg in layoutGroups)
 		{
 			var line = Unifill.uSubstring(text, lg.startIndex, lg.endIndex);
-			Sys.println("start:" + lg.startIndex + " end:" + lg.endIndex + " x:" + lg.offsetX + " y:" + lg.offsetY);
-			Sys.println(line);
 		}
 	}
 	
