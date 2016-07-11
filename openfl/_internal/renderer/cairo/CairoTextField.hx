@@ -15,6 +15,7 @@ import openfl.display.BitmapData;
 import openfl.geom.Rectangle;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
+import unifill.Unifill;
 
 @:access(openfl.display.BitmapData)
 @:access(openfl.display.Graphics)
@@ -198,7 +199,7 @@ class CairoTextField {
 					cairo.setFontSize (size);
 					
 					cairo.moveTo (group.offsetX + scrollX, group.offsetY + group.ascent + scrollY);
-					cairo.showText (text.substring (group.startIndex, group.endIndex));
+					cairo.showText (Unifill.uSubstring(text, group.startIndex, group.endIndex));
 					
 					if (textField.__caretIndex > -1 && textEngine.selectable) {
 						
