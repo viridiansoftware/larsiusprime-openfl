@@ -761,7 +761,7 @@ class TextEngine {
 			
 		}
 		
-		inline function breakLongWords (endIndex:Int):Void {
+		function breakLongWords (endIndex:Int):Void {
 			
 			var tempWidth = getTextWidth(Unifill.uSubstring(text, textIndex, endIndex));
 			
@@ -797,7 +797,7 @@ class TextEngine {
 				layoutGroups.push (layoutGroup);
 				
 				lineIndex++;
-				textIndex += i;
+				textIndex += i > 0 ? i : 1;
 				
 				offsetX = 2;
 				offsetY += heightValue;
@@ -815,7 +815,9 @@ class TextEngine {
 		lineFormat = formatRange.format;
 		var wrap;
 		
-		while (textIndex < Unifill.uLength(text)) {
+		var ulen = Unifill.uLength(text);
+		
+		while (textIndex < ulen) {
 			
 			if ((breakIndex > -1) && (spaceIndex == -1 || breakIndex < spaceIndex) && (formatRange.end >= breakIndex)) {
 				
