@@ -1,8 +1,10 @@
 package openfl._internal.text;
 
+import unifill.Unifill;
 
 import haxe.Timer;
 import haxe.Utf8;
+import haxe.io.BytesBuffer;
 import lime.graphics.cairo.CairoFontFace;
 import lime.graphics.opengl.GLTexture;
 import lime.system.System;
@@ -445,7 +447,7 @@ class TextEngine {
 			
 		} else {
 			
-			return text.substring (index > 0 ? lineBreaks[index - 1] : 0, lineBreaks[index]);
+			return Unifill.uSubstring(text, index > 0 ? lineBreaks[index - 1] : 0, lineBreaks[index]);
 			
 		}
 		
@@ -453,82 +455,16 @@ class TextEngine {
 	
 	//copy from unifill:
 		
-		private inline function uIndexOf(s : String, value : String, startIndex : Int = 0) : Int {
-			
-			var index = s.indexOf(value, offsetByCodePoints(s, 0, startIndex));
-			return if (index >= 0) codePointCount(s, 0, index) else -1;
-			
-		}
 		
-		private inline function offsetByCodePoints(s:String, index : Int, codePointOffset : Int) : Int {
-			return if (codePointOffset >= 0) {
-				forward_offset_by_code_points(s, index, codePointOffset);
-			} else {
-				backward_offset_by_code_points(s, index, -codePointOffset);
-			}
-		}
-		
-		private inline function forward_offset_by_code_points(s:String, index : Int, codePointOffset : Int) : Int {
-			var len = s.length;
-			var i = 0;
-			while (i < codePointOffset && index < len) {
-				index += codePointWidthAt(s, index);
-				++i;
-			}
-			return index;
-		}
-		
-		private inline function backward_offset_by_code_points(s:String, index : Int, codePointOffset : Int) : Int {
-			var count = 0;
-			while (count < codePointOffset && 0 < index) {
-				index -= codePointWidthBefore(s, index);
-				++count;
-			}
-			return index;
-		}
-		
-		private inline function codePointCount(s:String, beginIndex : Int, endIndex : Int) : Int {
-			var index = beginIndex;
-			var i = 0;
-			while (index < endIndex) {
-				index += codePointWidthAt(s, index);
-				++i;
-			}
-			return i;
-		}
-		
-		private inline function codePointWidthAt(s:String, index : Int) : Int {
-			var c = codeUnitAt(s, index);
-			return code_point_width(c);
-		}
-		
-		private inline function codePointWidthBefore(s:String, index : Int) : Int {
-			return find_prev_code_point(s, function(s, i) return codeUnitAt(s, i), index);
-		}
-		
-		private inline function find_prev_code_point(s:String, accessor : String -> Int -> Int, index : Int) : Int {
-			var c1 = accessor(s, index - 1);
-			return (c1 < 0x80 || c1 >= 0xC0) ? 1
-				: (accessor(s, index - 2) & 0xE0 == 0xC0) ? 2
-				: (accessor(s, index - 3) & 0xF0 == 0xE0) ? 3
-				: (accessor(s, index - 4) & 0xF8 == 0xF0) ? 4
-				: 1;
-		}
-		
-		private inline function codeUnitAt(s:String, index : Int) : Int {
-			return StringTools.fastCodeAt(s, index);
-		}
-		
-		private inline function code_point_width(c : Int) : Int {
-			return (c < 0xC0) ? 1 : (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : (c < 0xF8) ? 4 : 1;
-		}
 		
 	//end copy from unifill
 	
 	public function getLineBreakIndex (startIndex:Int = 0):Int {
 		
-		var cr = uIndexOf (text, "\n", startIndex);
-		var lf = uIndexOf (text, "\r", startIndex);
+		var cr = Unifill.uIndexOf (text, "\n", startIndex);
+		var lf = Unifill.uIndexOf (text, "\r", startIndex);
+		
+		Sys.println("cr: " + cr + " lf: " + lf);
 		
 		if (cr == -1) return lf;
 		if (lf == -1) return cr;
@@ -665,7 +601,7 @@ class TextEngine {
 		
 		var spaceWidth = 0.0;
 		var previousSpaceIndex = 0;
-		var spaceIndex = text.indexOf (" ");
+		var spaceIndex = Unifill.uIndexOf(text, " ");
 		var breakIndex = getLineBreakIndex();
 		
 		var marginRight = 0.0;
@@ -684,8 +620,8 @@ class TextEngine {
 			#if (js && html5)
 			
 			for (i in startIndex...endIndex) {
-				
-				advances.push (__context.measureText (text.charAt (i)).width);
+		
+				advances.push (__context.measureText (Unifill.uCharAt(text, i)).width);
 				
 			}
 			
@@ -708,7 +644,7 @@ class TextEngine {
 				
 			}
 			
-			__textLayout.text = text.substring (startIndex, endIndex);
+			__textLayout.text = Unifill.uSubstring(text, startIndex, endIndex);
 			
 			for (position in __textLayout.positions) {
 				
@@ -829,7 +765,12 @@ class TextEngine {
 		
 		inline function breakLongWords (endIndex:Int):Void {
 			
-			var tempWidth = getTextWidth(text.substring(textIndex, endIndex));
+			Sys.println(text);
+			Sys.println("breakLongWords : " + endIndex);
+			
+			var tempWidth = getTextWidth(Unifill.uSubstring(text, textIndex, endIndex));
+			
+			Sys.println("tempWidth = " + tempWidth);
 			
 			while (offsetX + tempWidth > width - 2) {
 				
@@ -837,7 +778,7 @@ class TextEngine {
 				
 				while (textIndex + i < endIndex + 1) {
 					
-					tempWidth = getTextWidth(text.substr(textIndex, i));
+					tempWidth = getTextWidth(Unifill.uSubstr(text, textIndex, i));
 					
 					if (offsetX + tempWidth > width - 2) {
 						
@@ -881,7 +822,7 @@ class TextEngine {
 		lineFormat = formatRange.format;
 		var wrap;
 		
-		while (textIndex < text.length) {
+		while (textIndex < Unifill.uLength(text)) {
 			
 			if ((breakIndex > -1) && (spaceIndex == -1 || breakIndex < spaceIndex) && (formatRange.end >= breakIndex)) {
 				
@@ -1052,7 +993,7 @@ class TextEngine {
 					textIndex = spaceIndex + 1;
 					
 					previousSpaceIndex = spaceIndex;
-					spaceIndex = text.indexOf (" ", previousSpaceIndex + 1);
+					spaceIndex = Unifill.uIndexOf(text, " ", previousSpaceIndex + 1);
 					
 					if (formatRange.end <= previousSpaceIndex) {
 						
@@ -1061,7 +1002,7 @@ class TextEngine {
 						
 					}
 					
-					if ((spaceIndex > breakIndex && breakIndex > -1) || textIndex > text.length || spaceIndex > formatRange.end || (spaceIndex == -1 && breakIndex > -1)) {
+					if ((spaceIndex > breakIndex && breakIndex > -1) || textIndex > Unifill.uLength(text) || spaceIndex > formatRange.end || (spaceIndex == -1 && breakIndex > -1)) {
 						
 						if (spaceIndex > formatRange.end) {
 							
@@ -1111,6 +1052,13 @@ class TextEngine {
 				
 			}
 			
+		}
+		
+		for (lg in layoutGroups)
+		{
+			var line = Unifill.uSubstring(text, lg.startIndex, lg.endIndex);
+			Sys.println("start:" + lg.startIndex + " end:" + lg.endIndex + " x:" + lg.offsetX + " y:" + lg.offsetY);
+			Sys.println(line);
 		}
 	}
 	
@@ -1219,8 +1167,8 @@ class TextEngine {
 								
 								group = layoutGroups[i + lineLength - 1];
 								
-								var endChar = text.charAt (group.endIndex);
-								if (group.endIndex < text.length && endChar != "\n" && endChar != "\r") {
+								var endChar = Unifill.uCharAt(text, group.endIndex);
+								if (group.endIndex < Unifill.uLength(text) && endChar != "\n" && endChar != "\r") {
 									
 									offsetX = (width - 4 - lineWidths[lineIndex]) / (lineLength - 1);
 									
