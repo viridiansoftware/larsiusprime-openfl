@@ -869,8 +869,9 @@ class TextEngine {
 				while (true) {
 					
 					if (spaceIndex == -1) spaceIndex = formatRange.end;
+					var breakOrSpaceIndex = (breakIndex != -1 && breakIndex < spaceIndex) ? breakIndex : spaceIndex;
 					
-					advances = getAdvances (text, textIndex, spaceIndex);
+					advances = getAdvances (text, textIndex, breakOrSpaceIndex);
 					widthValue = getAdvancesWidth (advances);
 					
 					if (wordWrap) {
@@ -945,6 +946,8 @@ class TextEngine {
 						layoutGroup.width = widthValue;
 						layoutGroup.height = heightValue;
 						layoutGroups.push (layoutGroup);
+						
+						var line = Unifill.uSubstring(text, textIndex, breakOrSpaceIndex);
 						
 						offsetX += widthValue + spaceWidth;
 						marginRight = spaceWidth;
@@ -1024,18 +1027,22 @@ class TextEngine {
 					
 					if ((spaceIndex > breakIndex && breakIndex > -1) || textIndex > ulen || spaceIndex > formatRange.end || (spaceIndex == -1 && breakIndex > -1)) {
 						
-						var substr = Unifill.uSubstring(text, textIndex, getLastIndex(ulen));
-						var textIsHangingOffEdge = offsetX + getTextWidth(substr) > width - 2;
-						
-						var first = Unifill.uSubstr(text, 0, 1);
-						var singleWidth = getTextWidth(first);
-						var smallerThanOne = (width - 2) < singleWidth;
-						
-						if (smallerThanOne)
+						var textIsHangingOffEdge = false;
+						if (textIndex > ulen == false)
 						{
-							textIsHangingOffEdge = false;
-						}
+							var substr = Unifill.uSubstring(text, textIndex, getLastIndex(ulen));
+							textIsHangingOffEdge = offsetX + getTextWidth(substr) > width - 2;
 						
+							var first = Unifill.uSubstr(text, 0, 1);
+							var singleWidth = getTextWidth(first);
+							var smallerThanOne = (width - 2) < singleWidth;
+							
+							if (smallerThanOne)
+							{
+								textIsHangingOffEdge = false;
+							}
+							var subwidth = getTextWidth(substr);
+						}
 						
 						if (!textIsHangingOffEdge) {
 						
