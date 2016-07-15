@@ -999,7 +999,10 @@ class TextEngine {
 					
 					if (breakIndex != -1 && breakIndex < spaceIndex) {
 						
-						textIndex = breakIndex;
+						textIndex = breakIndex + 1;
+						
+						offsetY += heightValue;
+						lineIndex++;
 						
 						previousBreakIndex = breakIndex;
 						breakIndex = getLineBreakIndex(textIndex);
