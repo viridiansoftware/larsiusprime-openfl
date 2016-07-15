@@ -932,7 +932,6 @@ class TextEngine {
 							
 						}
 						
-						var breakOrSpaceIndex = (breakIndex != -1 && breakIndex < spaceIndex) ? breakIndex : spaceIndex;
 						breakLongWords(breakOrSpaceIndex);
 						
 						layoutGroup = new TextLayoutGroup (formatRange.format, textIndex, breakOrSpaceIndex);
@@ -946,8 +945,6 @@ class TextEngine {
 						layoutGroup.width = widthValue;
 						layoutGroup.height = heightValue;
 						layoutGroups.push (layoutGroup);
-						
-						var line = Unifill.uSubstring(text, textIndex, breakOrSpaceIndex);
 						
 						offsetX += widthValue + spaceWidth;
 						marginRight = spaceWidth;
@@ -969,7 +966,7 @@ class TextEngine {
 							
 						} else if (layoutGroup == null || lineFormat.align == JUSTIFY) {
 							
-							layoutGroup = new TextLayoutGroup (formatRange.format, textIndex, spaceIndex);
+							layoutGroup = new TextLayoutGroup (formatRange.format, textIndex, breakOrSpaceIndex);
 							layoutGroup.advances = advances;
 							layoutGroup.offsetX = offsetX;
 							layoutGroup.ascent = ascent;
@@ -986,7 +983,7 @@ class TextEngine {
 							
 						} else {
 							
-							layoutGroup.endIndex = spaceIndex;
+							layoutGroup.endIndex = breakOrSpaceIndex;
 							layoutGroup.advances = layoutGroup.advances.concat (advances);
 							layoutGroup.width += marginRight + widthValue;
 							
@@ -1001,7 +998,7 @@ class TextEngine {
 					
 					if (breakIndex != -1 && breakIndex < spaceIndex) {
 						
-						textIndex = breakIndex + 1;
+						textIndex = breakIndex;
 						
 						offsetY += heightValue;
 						lineIndex++;
@@ -1238,7 +1235,6 @@ class TextEngine {
 			}
 			
 		}
-		
 	}
 	
 	
