@@ -599,6 +599,7 @@ class TextEngine {
 		
 		var spaceWidth = 0.0;
 		var previousSpaceIndex = 0;
+		var previousBreakIndex = 0;
 		var spaceIndex = Unifill.uIndexOf(text, " ");
 		var breakIndex = getLineBreakIndex();
 		
@@ -667,6 +668,16 @@ class TextEngine {
 			}
 			
 			return width;
+			
+		}
+		
+		inline function getLastIndex (uLength:Int):Int {
+			
+			var lastIndex = formatRange.end < uLength ? formatRange.end : uLength;
+			lastIndex = spaceIndex > -1 && spaceIndex < lastIndex ? spaceIndex : lastIndex;
+			lastIndex = breakIndex > -1 && breakIndex < lastIndex ? breakIndex : lastIndex;
+			
+			return lastIndex;
 			
 		}
 		
@@ -761,7 +772,7 @@ class TextEngine {
 			
 		}
 		
-		function breakLongWords (endIndex:Int):Void {
+		inline function breakLongWords (endIndex:Int):Void {
 			
 			var tempWidth = getTextWidth(Unifill.uSubstring(text, textIndex, endIndex));
 			
@@ -896,7 +907,7 @@ class TextEngine {
 							
 						}
 						
-						if (textIndex == previousSpaceIndex + 1) {
+						if (textIndex == previousSpaceIndex + 1 || textIndex == previousBreakIndex + 1) {
 							
 							offsetY += heightValue;
 							lineIndex++;
@@ -921,9 +932,10 @@ class TextEngine {
 							
 						}
 						
-						breakLongWords(spaceIndex);
+						var breakOrSpaceIndex = (breakIndex != -1 && breakIndex < spaceIndex) ? breakIndex : spaceIndex;
+						breakLongWords(breakOrSpaceIndex);
 						
-						layoutGroup = new TextLayoutGroup (formatRange.format, textIndex, spaceIndex);
+						layoutGroup = new TextLayoutGroup (formatRange.format, textIndex, breakOrSpaceIndex);
 						layoutGroup.advances = advances;
 						layoutGroup.offsetX = offsetX;
 						layoutGroup.ascent = ascent;
@@ -985,10 +997,21 @@ class TextEngine {
 						
 					}
 					
-					textIndex = spaceIndex + 1;
-					
-					previousSpaceIndex = spaceIndex;
-					spaceIndex = Unifill.uIndexOf(text, " ", previousSpaceIndex + 1);
+					if (breakIndex != -1 && breakIndex < spaceIndex) {
+						
+						textIndex = breakIndex;
+						
+						previousBreakIndex = breakIndex;
+						breakIndex = getLineBreakIndex(textIndex);
+						
+					} else {
+						
+						textIndex = spaceIndex + 1;
+						
+						previousSpaceIndex = spaceIndex;
+						spaceIndex = Unifill.uIndexOf(text, " ", previousSpaceIndex + 1);
+						
+					}
 					
 					if (formatRange.end <= previousSpaceIndex) {
 						
@@ -997,15 +1020,22 @@ class TextEngine {
 						
 					}
 					
-					if ((spaceIndex > breakIndex && breakIndex > -1) || textIndex > Unifill.uLength(text) || spaceIndex > formatRange.end || (spaceIndex == -1 && breakIndex > -1)) {
+					if ((spaceIndex > breakIndex && breakIndex > -1) || textIndex > ulen || spaceIndex > formatRange.end || (spaceIndex == -1 && breakIndex > -1)) {
 						
-						if (spaceIndex > formatRange.end) {
+						var substr = Unifill.uSubstring(text, textIndex, getLastIndex(ulen));
+						var textIsHangingOffEdge = offsetX + getTextWidth(substr) > width - 2;
+						
+						if (!textIsHangingOffEdge) {
+						
+							if (spaceIndex > formatRange.end) {
+								
+								textIndex--;
+								
+							}
 							
-							textIndex--;
+							break;
 							
 						}
-						
-						break;
 						
 					}
 					
@@ -1047,11 +1077,6 @@ class TextEngine {
 				
 			}
 			
-		}
-		
-		for (lg in layoutGroups)
-		{
-			var line = Unifill.uSubstring(text, lg.startIndex, lg.endIndex);
 		}
 	}
 	
