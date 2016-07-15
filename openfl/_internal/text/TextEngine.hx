@@ -792,7 +792,6 @@ class TextEngine {
 					}
 					
 					i++;
-					
 				}
 				
 				layoutGroup = new TextLayoutGroup (formatRange.format, textIndex, textIndex + i);
@@ -1028,6 +1027,16 @@ class TextEngine {
 						var substr = Unifill.uSubstring(text, textIndex, getLastIndex(ulen));
 						var textIsHangingOffEdge = offsetX + getTextWidth(substr) > width - 2;
 						
+						var first = Unifill.uSubstr(text, 0, 1);
+						var singleWidth = getTextWidth(first);
+						var smallerThanOne = (width - 2) < singleWidth;
+						
+						if (smallerThanOne)
+						{
+							textIsHangingOffEdge = false;
+						}
+						
+						
 						if (!textIsHangingOffEdge) {
 						
 							if (spaceIndex > formatRange.end) {
@@ -1079,7 +1088,7 @@ class TextEngine {
 				nextFormatRange ();
 				
 			}
-			
+		
 		}
 	}
 	
