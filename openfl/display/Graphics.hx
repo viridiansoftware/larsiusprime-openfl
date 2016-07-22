@@ -55,14 +55,12 @@ import js.html.CanvasRenderingContext2D;
 	public static inline var TILE_BLEND_DIFFERENCE = 0x01000000;
 	public static inline var TILE_BLEND_INVERT = 0x02000000;
 	
-	public var __hardware:Bool;
 	
 	private var __bounds:Rectangle;
 	private var __commands:DrawCommandBuffer;
 	private var __dirty (default, set):Bool = true;
 	//private var __glStack:Array<GLStack> = [];
 	//private var __drawPaths:Array<DrawPath>;
-	private var __image:Image;
 	private var __positionX:Float;
 	private var __positionY:Float;
 	private var __strokePadding:Float;
@@ -87,7 +85,6 @@ import js.html.CanvasRenderingContext2D;
 		__strokePadding = 0;
 		__positionX = 0;
 		__positionY = 0;
-		__hardware = false;
 		
 		#if (js && html5)
 		moveTo (0, 0);
@@ -146,7 +143,6 @@ import js.html.CanvasRenderingContext2D;
 		}
 		
 		__visible = false;
-		__hardware = false;
 		
 		#if (js && html5)
 		moveTo (0, 0);
@@ -676,7 +672,6 @@ import js.html.CanvasRenderingContext2D;
 		
 		__dirty = true;
 		__visible = true;
-		__hardware = true;
 		
 	}
 	

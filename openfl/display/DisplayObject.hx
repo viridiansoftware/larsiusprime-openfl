@@ -65,7 +65,6 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if !disa
 	public var scaleX (get, set):Float;
 	public var scaleY (get, set):Float;
 	public var scrollRect (get, set):Rectangle;
-	public var shader (default, set):Shader;
 	public var stage (default, null):Stage;
 	public var transform (get, set):Transform;
 	public var visible (get, set):Bool;
@@ -96,7 +95,6 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if !disa
 	private var __rotationCosine:Float;
 	private var __rotationSine:Float;
 	private var __scrollRect:Rectangle;
-	private var __shader:Shader;
 	private var __transform:Matrix;
 	private var __transformDirty:Bool;
 	private var __visible:Bool;
@@ -612,10 +610,6 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if !disa
 					
 				}
 				
-				if (shader == null) {
-					__shader = parent.__shader;
-				}
-				
 				#else
 				
 				var worldVisible = (parent.__worldVisible && visible);
@@ -792,14 +786,7 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if !disa
 		
 	}
 	
-	private function set_shader (value:Shader):Shader {
-		
-		__shader = value;
-		return shader = value;
-		
-	}
-	
-	
+
 	private function get_cacheAsBitmap ():Bool {
 		
 		return __cacheAsBitmap;
