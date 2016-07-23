@@ -501,8 +501,8 @@ import js.html.CanvasRenderingContext2D;
 			var cacheID = -1;
 			
 			var x, y, id, scale, rotation, tileWidth, tileHeight, originX, originY;
-			var tile = null;
-			var tilePoint = null;
+			var tile:Rectangle = null;
+			var tilePoint:Point = null;
 			
 			while (index < totalCount) {
 				
@@ -533,8 +533,10 @@ import js.html.CanvasRenderingContext2D;
 					if (!useRect && cacheID != id) {
 						
 						cacheID = id;
-						tile = sheet.__tileRects[id];
-						tilePoint = sheet.__centerPoints[id];
+						tile = sheet.__rectTile;
+						tilePoint = sheet.__point;
+						sheet.copyTileRect (tile, id);
+						sheet.copyTileCenter (tilePoint, id);
 						
 					} else if (useRect) {
 						
@@ -611,8 +613,10 @@ import js.html.CanvasRenderingContext2D;
 			
 		} else {
 			
-			var x, y, id, tile, centerPoint, originX, originY;
+			var x, y, id, originX, originY;
+			var centerPoint:Point = null;
 			var rect = openfl.geom.Rectangle.__temp;
+			var tile:Rectangle = null;
 			var index = 0;
 			
 			while (index < totalCount) {
@@ -649,19 +653,17 @@ import js.html.CanvasRenderingContext2D;
 					__inflateBounds (x - originX + rect.width, y - originY + rect.height);
 					
 				} else {
+	
+					tile = sheet.__rectTile;
+					centerPoint = sheet.__point;
+					sheet.copyTileRect (tile, id);
+					sheet.copyTileCenter (centerPoint, id);
+
+					originX = centerPoint.x * tile.width;
+					originY = centerPoint.y * tile.height;
 					
-					tile = sheet.__tileRects[id];
-					
-					if (tile != null) {
-						
-						centerPoint = sheet.__centerPoints[id];
-						originX = centerPoint.x * tile.width;
-						originY = centerPoint.y * tile.height;
-						
-						__inflateBounds (x - originX, y - originY);
-						__inflateBounds (x - originX + tile.width, y - originY + tile.height);
-						
-					}
+					__inflateBounds (x - originX, y - originY);
+					__inflateBounds (x - originX + tile.width, y - originY + tile.height);
 					
 				}
 				
