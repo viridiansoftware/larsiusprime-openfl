@@ -72,12 +72,15 @@ class BitmapData implements IBitmapDrawable {
 	public var __worldColorTransform:ColorTransform;
 	
 	private var __blendMode:BlendMode;
-	private var __buffer:GLBuffer;
 	private var __isValid:Bool;
 	private var __surface:CairoSurface;
+#if lime_console
+	private var __texture:lime.graphics.console.Texture;
+#else
+	private var __buffer:GLBuffer;
 	private var __texture:GLTexture;
 	private var __textureVersion:Int;
-	
+#end
 	
 	public function new (width:Int, height:Int, transparent:Bool = true, fillColor:UInt = 0xFFFFFFFF) {
 		
@@ -352,6 +355,9 @@ class BitmapData implements IBitmapDrawable {
 		rect = null;
 		__isValid = false;
 		
+		#if lime_console
+		// TODO(james4k): we check for liveliness via WeakRef's, but this would be more immediate
+		#else
 		if (__texture != null) {
 			
 			var renderer = @:privateAccess Lib.current.stage.__renderer;
@@ -371,6 +377,7 @@ class BitmapData implements IBitmapDrawable {
 			}
 			
 		}
+		#end
 		
 	}
 	
@@ -610,6 +617,12 @@ class BitmapData implements IBitmapDrawable {
 	
 	public function getBuffer (gl:GLRenderContext):GLBuffer {
 		
+		#if lime_console
+
+		return null;
+
+		#else
+
 		if (__buffer == null) {
 			
 			var data = [
@@ -629,6 +642,8 @@ class BitmapData implements IBitmapDrawable {
 		}
 		
 		return __buffer;
+
+		#end
 		
 	}
 	
@@ -692,6 +707,12 @@ class BitmapData implements IBitmapDrawable {
 	
 	public function getTexture (gl:GLRenderContext):GLTexture {
 		
+		#if lime_console
+
+		return null;
+
+		#else
+
 		if (!__isValid) return null;
 		
 		if (__texture == null) {
@@ -793,6 +814,8 @@ class BitmapData implements IBitmapDrawable {
 		}
 		
 		return __texture;
+
+		#end
 		
 	}
 	
