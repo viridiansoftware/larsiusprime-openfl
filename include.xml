@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension>
 	
+	<haxelib name="unifill"/>
+	
 	<haxedef name="native" if="cpp || neko" />
 	<set name="native" if="cpp || neko" />
 	
