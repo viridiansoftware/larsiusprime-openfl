@@ -433,19 +433,6 @@ class TextEngine {
 	}
 	
 	
-	public function getBreakIndex (?startIndex:Int):Int {
-		
-		var cr = text.indexOf ("\n", startIndex);
-		var lf = text.indexOf ("\r", startIndex);
-		
-		if (cr == -1) return lf;
-		if (lf == -1) return cr;
-		
-		return cr < lf ? cr : lf;
-		
-	}
-	
-	
 	public function getLine (index:Int):String {
 		
 		if (index < 0 || index > lineBreaks.length + 1) {
@@ -1011,7 +998,7 @@ class TextEngine {
 						lineIndex++;
 						
 						previousBreakIndex = breakIndex;
-						breakIndex = getLineBreakIndex(textIndex);
+						breakIndex = getBreakIndex(textIndex);
 						
 					} else {
 						
