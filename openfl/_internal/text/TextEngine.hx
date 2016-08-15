@@ -433,6 +433,19 @@ class TextEngine {
 	}
 	
 	
+	public function getBreakIndex (?startIndex:Int):Int {
+		
+		var cr = text.indexOf ("\n", startIndex);
+		var lf = text.indexOf ("\r", startIndex);
+		
+		if (cr == -1) return lf;
+		if (lf == -1) return cr;
+		
+		return cr < lf ? cr : lf;
+		
+	}
+	
+	
 	public function getLine (index:Int):String {
 		
 		if (index < 0 || index > lineBreaks.length + 1) {
@@ -453,13 +466,7 @@ class TextEngine {
 		
 	}
 	
-	//copy from unifill:
-		
-		
-		
-	//end copy from unifill
-	
-	public function getLineBreakIndex (startIndex:Int = 0):Int {
+	public function getBreakIndex (startIndex:Int = 0):Int {
 		
 		var cr = Unifill.uIndexOf (text, "\n", startIndex);
 		var lf = Unifill.uIndexOf (text, "\r", startIndex);
@@ -601,7 +608,7 @@ class TextEngine {
 		var previousSpaceIndex = 0;
 		var previousBreakIndex = 0;
 		var spaceIndex = Unifill.uIndexOf(text, " ");
-		var breakIndex = getLineBreakIndex();
+		var breakIndex = getBreakIndex();
 		
 		var marginRight = 0.0;
 		var offsetX = 2.0;
@@ -856,11 +863,11 @@ class TextEngine {
 					lineFormat = formatRange.format;
 					
 				}
-				
+
 				textIndex = breakIndex + 1;
-				breakIndex = getLineBreakIndex (textIndex);
+				breakIndex = getBreakIndex (textIndex);
 				lineIndex++;
-				
+
 			} else if (formatRange.end >= spaceIndex && spaceIndex > -1) {
 				
 				layoutGroup = null;
@@ -1048,7 +1055,13 @@ class TextEngine {
 								textIndex--;
 								
 							}
-							
+
+						if (spaceIndex > formatRange.end) {
+
+							textIndex--;
+
+						}
+						
 							break;
 							
 						}
@@ -1064,9 +1077,9 @@ class TextEngine {
 					break;
 					
 				}
-				
+
 				if (textIndex < formatRange.end) {
-					
+
 					if (wordWrap) {
 						breakLongWords(formatRange.end);
 					}
@@ -1082,13 +1095,13 @@ class TextEngine {
 					layoutGroup.width = getAdvancesWidth (layoutGroup.advances);
 					layoutGroup.height = heightValue;
 					layoutGroups.push (layoutGroup);
-					
+
 					offsetX += layoutGroup.width;
-					
+
 					textIndex = formatRange.end;
-					
+
 				}
-				
+
 				nextFormatRange ();
 				
 			}
