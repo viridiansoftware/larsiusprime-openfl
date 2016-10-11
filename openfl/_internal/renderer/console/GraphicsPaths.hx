@@ -73,12 +73,12 @@ class GraphicsPaths {
 
 	public static function curveTo (
 		points:Array<Float>,
+		n:Int,
 		cx:Float, cy:Float, x:Float, y:Float
 	) {
 		
 		var xa:Float = 0;
 		var ya:Float = 0;
-		var n = 20;
 		
 		var fromX = points[points.length-2];
 		var fromY = points[points.length-1];
@@ -117,23 +117,24 @@ class GraphicsPaths {
 		var cx2 = -rx + (rx * TAN22);
 		var cy1 = -ry + (ry * SIN45);
 		var cy2 = -ry + (ry * TAN22);
+		var n = Std.int((rx+ry)/2);
 
 		points.push (xe);
 		points.push (ye - ry);
-		curveTo (points, xe, ye + cy2, xe + cx1, ye + cy1);
-		curveTo (points, xe + cx2, ye, xe - rx, ye);
+		curveTo (points, n, xe, ye + cy2, xe + cx1, ye + cy1);
+		curveTo (points, n, xe + cx2, ye, xe - rx, ye);
 		points.push(x + rx);
 		points.push(ye); 
-		curveTo (points, x - cx2, ye, x - cx1, ye + cy1);
-		curveTo (points, x, ye + cy2, x, ye - ry);
+		curveTo (points, n, x - cx2, ye, x - cx1, ye + cy1);
+		curveTo (points, n, x, ye + cy2, x, ye - ry);
 		points.push(x);
 		points.push(y + ry);
-		curveTo (points, x, y - cy2, x - cx1, y - cy1);
-		curveTo (points, x - cx2, y, x + rx, y);
+		curveTo (points, n, x, y - cy2, x - cx1, y - cy1);
+		curveTo (points, n, x - cx2, y, x + rx, y);
 		points.push(xe - rx);
 		points.push(y);
-		curveTo (points, xe + cx2, y, xe + cx1, y - cy1);
-		curveTo (points, xe, y - cy2, xe, y + ry);
+		curveTo (points, n, xe + cx2, y, xe + cx1, y - cy1);
+		curveTo (points, n, xe, y - cy2, xe, y + ry);
 		points.push(xe);
 		points.push(ye - ry);
 
