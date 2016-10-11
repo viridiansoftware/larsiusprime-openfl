@@ -64,8 +64,10 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private var ctx:ConsoleRenderContext;
 
-	private var defaultShader:Shader;
-	private var fillShader:Shader;
+	private var shaderDefault (get,null):Shader;
+	private var shaderFill (get,null):Shader;
+	private var shaderDefault_scissor:Shader;
+	private var shaderFill_scissor:Shader;
 
 	private var textureBitmaps = new Array<WeakRef<BitmapData>> ();
 	private var textures = new Array<Texture> ();
@@ -121,9 +123,13 @@ class ConsoleRenderer extends AbstractRenderer {
 		this.width = width;
 		this.height = height;
 
-		defaultShader = ctx.lookupShader ("openfl_default");
-		fillShader = ctx.lookupShader ("openfl_fill");
+		shaderDefault = ctx.lookupShader ("openfl_default");
+		shaderFill = ctx.lookupShader ("openfl_fill");
 
+	#if vita
+		shaderDefault_scissor = ctx.lookupShader ("openfl_default_scissor");
+		shaderFill_scissor = ctx.lookupShader ("openfl_fill_scissor");
+	#end
 		
 		// TODO(james4k): whiteTextureData should just be a local variable, but
 		// haxe's optimizer futz this and generates code that tries to take an address
@@ -133,6 +139,30 @@ class ConsoleRenderer extends AbstractRenderer {
 			1, 1,
 			cpp.Pointer.addressOf (whiteTextureData).reinterpret ()
 		);
+
+	}
+
+
+	private inline function get_shaderDefault ():Shader {
+
+	#if vita
+		if (clipRect != null) {
+			return shaderDefault_scissor;
+		}
+	#end
+		return shaderDefault;
+
+	}
+
+
+	private inline function get_shaderFill ():Shader {
+
+	#if vita
+		if (clipRect != null) {
+			return shaderFill_scissor;
+		}
+	#end
+		return shaderFill;
 
 	}
 
@@ -496,7 +526,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		var texture = bitmapDataTexture (bitmap);
 
-		ctx.bindShader (defaultShader);
+		ctx.bindShader (shaderDefault);
 		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (color, 0), 1);
@@ -640,7 +670,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 		indexBuffer.unlock ();
 
-		ctx.bindShader (fillShader);
+		ctx.bindShader (shaderFill);
 		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
@@ -736,7 +766,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		vertexBuffer.unlock ();
 		indexBuffer.unlock ();
 
-		ctx.bindShader (defaultShader);
+		ctx.bindShader (shaderDefault);
 		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (lineColor, 0), 1);
@@ -952,7 +982,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var texture = bitmapDataTexture (fillBitmap);
 
-						ctx.bindShader (defaultShader);
+						ctx.bindShader (shaderDefault);
 						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 						ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 						ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (color, 0), 1);
@@ -987,7 +1017,7 @@ class ConsoleRenderer extends AbstractRenderer {
 						out.vec3 (cmd.x + cmd.width, cmd.y + cmd.height, 0);
 						vertexBuffer.unlock ();
 
-						ctx.bindShader (fillShader);
+						ctx.bindShader (shaderFill);
 						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 						ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 						ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
@@ -1052,7 +1082,7 @@ class ConsoleRenderer extends AbstractRenderer {
 							}
 							indexBuffer.unlock ();
 
-							ctx.bindShader (fillShader);
+							ctx.bindShader (shaderFill);
 							ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 							ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 							ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
@@ -1281,7 +1311,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					var texture = bitmapDataTexture (cmd.sheet.__bitmap);
 
 					setBlendState (blendMode);
-					ctx.bindShader (defaultShader);
+					ctx.bindShader (shaderDefault);
 					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 					ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 					ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
@@ -1341,7 +1371,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 					indexBuffer.unlock ();
 
-					ctx.bindShader (defaultShader);
+					ctx.bindShader (shaderDefault);
 					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 					ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 					ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
@@ -1434,7 +1464,7 @@ class ConsoleRenderer extends AbstractRenderer {
 			}
 			indexBuffer.unlock ();
 
-			ctx.bindShader (fillShader);
+			ctx.bindShader (shaderFill);
 			ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 			ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
 			ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
