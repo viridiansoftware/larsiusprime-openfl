@@ -47,6 +47,8 @@ import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
 
+using cpp.AtomicInt;
+
 
 @:access(openfl.display.Bitmap)
 @:access(openfl.display.BitmapData)
@@ -143,6 +145,8 @@ class ConsoleRenderer extends AbstractRenderer {
 			cpp.Pointer.addressOf (whiteTextureData).reinterpret ()
 		);
 
+		initWorkers();
+
 	}
 
 
@@ -218,6 +222,8 @@ class ConsoleRenderer extends AbstractRenderer {
 		renderDisplayObject (stage);
 
 		collectTextures ();
+
+		finishWork ();
 
 	}
 
@@ -408,9 +414,11 @@ class ConsoleRenderer extends AbstractRenderer {
 
 			if (image.dirty && image.buffer.data != null) {
 
-				t.updateFromRGBA (
-					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
-				);
+				queueWork(function():Void {
+					t.updateFromRGBA (
+						cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+					);
+				});
 
 				image.dirty = false;
 
@@ -430,9 +438,11 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		if (image.buffer.data != null) {
 
-			texture.updateFromRGBA (
-				cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
-			);
+			queueWork(function():Void {
+				texture.updateFromRGBA (
+					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+				);
+			});
 
 		}
 
@@ -1502,6 +1512,68 @@ class ConsoleRenderer extends AbstractRenderer {
 			//ctx.draw (Primitive.Triangle, 0, vertexCount - 2);
 			ctx.setIndexSource (indexBuffer);
 			ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (indexCount, 3));
+
+		}
+
+	}
+
+	private static var workQueue:cpp.vm.Deque<Void->Void> = null;
+	private static var workCount:cpp.AtomicInt = 0;
+
+	private static function initWorkers():Void
+	{
+		if (workQueue == null)
+		{
+			workQueue = new cpp.vm.Deque<Void->Void> ();
+			cpp.vm.Thread.create(workerThread);
+		}
+	}
+
+	// queueWork queues some work that will finish by the end of the frame.
+	private static function queueWork (work:Void->Void):Void {
+
+		var ptrWorkCount = cpp.Pointer.addressOf (workCount);
+		if (ptrWorkCount.atomicInc () >= 32) {
+			work ();
+			ptrWorkCount.atomicDec ();
+		} else {
+			workQueue.add (work);
+		}
+
+	}
+
+	// finishWork finishes up and waits for any ongoing work.
+	private static function finishWork ():Void {
+
+		while (workCount != 0) {
+
+			var work = workQueue.pop (false);
+			if (work == null) {
+				continue;
+			}
+
+			work ();
+
+			var ptrWorkCount = cpp.Pointer.addressOf (workCount);
+			ptrWorkCount.atomicDec ();
+
+		}
+
+	}
+
+	private static function workerThread ():Void {
+
+		while (true) {
+
+			var work = workQueue.pop (true);
+			if (work == null) {
+				return;
+			}
+
+			work ();
+
+			var ptrWorkCount = cpp.Pointer.addressOf (workCount);
+			ptrWorkCount.atomicDec ();
 
 		}
 
