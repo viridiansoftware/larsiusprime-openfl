@@ -1123,25 +1123,30 @@ class ConsoleRenderer extends AbstractRenderer {
 				case DRAW_TILES:
 
 					var cmd = r.readDrawTiles ();
+					var sheet = cmd.sheet;
+					var tileData = cmd.tileData;
+					var smooth = cmd.smooth;
+					var flags = cmd.flags;
+					var count = cmd.count;
 
-					var useScale = (cmd.flags & Tilesheet.TILE_SCALE) != 0;
-					var useRotation = (cmd.flags & Tilesheet.TILE_ROTATION) != 0;
-					var useTransform = (cmd.flags & Tilesheet.TILE_TRANS_2x2) != 0;
-					var useRGB = (cmd.flags & Tilesheet.TILE_RGB) != 0;
-					var useAlpha = (cmd.flags & Tilesheet.TILE_ALPHA) != 0;
-					var useRect = (cmd.flags & Tilesheet.TILE_RECT) != 0;
-					var useOrigin = (cmd.flags & Tilesheet.TILE_ORIGIN) != 0;
+					var useScale = (flags & Tilesheet.TILE_SCALE) != 0;
+					var useRotation = (flags & Tilesheet.TILE_ROTATION) != 0;
+					var useTransform = (flags & Tilesheet.TILE_TRANS_2x2) != 0;
+					var useRGB = (flags & Tilesheet.TILE_RGB) != 0;
+					var useAlpha = (flags & Tilesheet.TILE_ALPHA) != 0;
+					var useRect = (flags & Tilesheet.TILE_RECT) != 0;
+					var useOrigin = (flags & Tilesheet.TILE_ORIGIN) != 0;
 
-					var blendMode:BlendMode = switch(cmd.flags & 0xF0000) {
+					var blendMode:BlendMode = switch(flags & 0xF0000) {
 						case Tilesheet.TILE_BLEND_ADD:		ADD;
 						case Tilesheet.TILE_BLEND_MULTIPLY:	MULTIPLY;
 						case Tilesheet.TILE_BLEND_SCREEN:	SCREEN;
-						case _: switch(cmd.flags & 0xF00000) {
+						case _: switch(flags & 0xF00000) {
 							case Tilesheet.TILE_BLEND_DARKEN:         DARKEN;
 							case Tilesheet.TILE_BLEND_LIGHTEN:        LIGHTEN;
 							case Tilesheet.TILE_BLEND_OVERLAY:        OVERLAY;
 							case Tilesheet.TILE_BLEND_HARDLIGHT:      HARDLIGHT;
-							case _: switch(cmd.flags & 0xF000000) {
+							case _: switch(flags & 0xF000000) {
 								case Tilesheet.TILE_BLEND_DIFFERENCE: DIFFERENCE;
 								case Tilesheet.TILE_BLEND_INVERT:     INVERT;
 								case _:                               NORMAL;
@@ -1185,9 +1190,9 @@ class ConsoleRenderer extends AbstractRenderer {
 						stride += 1;
 					}
 
-					var totalCount = cmd.tileData.length;
-					if (cmd.count >= 0 && totalCount > cmd.count) {
-						totalCount = cmd.count;
+					var totalCount = tileData.length;
+					if (count >= 0 && totalCount > count) {
+						totalCount = count;
 					}
 					var itemCount = div (totalCount, stride);
 					if (itemCount <= 0) {
@@ -1195,9 +1200,9 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 
 					var tileID = -1;
-					var rect:Rectangle = cmd.sheet.__rectTile;
-					var tileUV:Rectangle = cmd.sheet.__rectUV;
-					var center:Point = cmd.sheet.__point;
+					var rect:Rectangle = sheet.__rectTile;
+					var tileUV:Rectangle = sheet.__rectUV;
+					var center:Point = sheet.__point;
 
 					var skippedItemCount = 0;
 					var vertexCount = itemCount * 4;
@@ -1208,38 +1213,38 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var index = itemIndex * stride;
 
-						var x = cmd.tileData[index + 0];
-						var y = cmd.tileData[index + 1];
+						var x = tileData[index + 0];
+						var y = tileData[index + 1];
 
 						if (useRect) {
 
 							tileID = -1;
 
-							rect.x = cmd.tileData[index + 2];
-							rect.y = cmd.tileData[index + 3];
-							rect.width = cmd.tileData[index + 4];
-							rect.height = cmd.tileData[index + 5];
+							rect.x = tileData[index + 2];
+							rect.y = tileData[index + 3];
+							rect.width = tileData[index + 4];
+							rect.height = tileData[index + 5];
 							
 							if (useOrigin) {
-								center.x = cmd.tileData[index + 6];
-								center.y = cmd.tileData[index + 7];
+								center.x = tileData[index + 6];
+								center.y = tileData[index + 7];
 							} else {
 								center.setTo(0, 0);
 							}
 							
 							tileUV.setTo(
-								rect.left / cmd.sheet.__bitmap.width,
-								rect.top / cmd.sheet.__bitmap.height,
-								rect.right / cmd.sheet.__bitmap.width,
-								rect.bottom / cmd.sheet.__bitmap.height
+								rect.left / sheet.__bitmap.width,
+								rect.top / sheet.__bitmap.height,
+								rect.right / sheet.__bitmap.width,
+								rect.bottom / sheet.__bitmap.height
 							);
 
 						} else {
 
-							tileID = Std.int (cmd.tileData[index + 2]);
-							cmd.sheet.copyTileRect(rect, tileID);	
-							cmd.sheet.copyTileCenter(center, tileID);	
-							cmd.sheet.copyTileUVs(tileUV, tileID);	
+							tileID = convertInt (tileData[index + 2]);
+							sheet.copyTileRect(rect, tileID);
+							sheet.copyTileCenter(center, tileID);
+							sheet.copyTileUVs(tileUV, tileID);
 
 						}
 
@@ -1256,28 +1261,28 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						if (useRGB) {
 							// TODO(james4k): premultiplied alpha?
-							red   = Std.int (cmd.tileData[index + rgbIndex + 0] * 255);
-							green = Std.int (cmd.tileData[index + rgbIndex + 1] * 255);
-							blue  = Std.int (cmd.tileData[index + rgbIndex + 2] * 255);
+							red   = convertInt (tileData[index + rgbIndex + 0] * 255);
+							green = convertInt (tileData[index + rgbIndex + 1] * 255);
+							blue  = convertInt (tileData[index + rgbIndex + 2] * 255);
 						}
 
 						if (useAlpha) {
-							alpha *= cmd.tileData[index + alphaIndex];	
+							alpha *= tileData[index + alphaIndex];
 						}
 
 						if (useScale) {
-							scale = cmd.tileData[index + scaleIndex];
+							scale = tileData[index + scaleIndex];
 						}
 
 						if (useRotation) {
-							rotation = cmd.tileData[index + rotationIndex];
+							rotation = tileData[index + rotationIndex];
 						}
 
 						if (useTransform) {
-							a = cmd.tileData[index + transformIndex + 0];
-							b = cmd.tileData[index + transformIndex + 1];
-							c = cmd.tileData[index + transformIndex + 2];
-							d = cmd.tileData[index + transformIndex + 3];
+							a = tileData[index + transformIndex + 0];
+							b = tileData[index + transformIndex + 1];
+							c = tileData[index + transformIndex + 2];
+							d = tileData[index + transformIndex + 3];
 						} else {
 							a = scale * Math.cos (rotation);
 							b = scale * Math.sin (rotation);
@@ -1297,19 +1302,19 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						out.vec3 (a*w1 + c*h1 + tx, d*h1 + b*w1 + ty, 0);
 						out.vec2 (tileUV.x, tileUV.y);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
 
 						out.vec3 (a*w0 + c*h1 + tx, d*h1 + b*w0 + ty, 0);
 						out.vec2 (tileUV.width, tileUV.y);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
 
 						out.vec3 (a*w0 + c*h0 + tx, d*h0 + b*w0 + ty, 0);
 						out.vec2 (tileUV.width, tileUV.height);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
 
 						out.vec3 (a*w1 + c*h0 + tx, d*h0 + b*w1 + ty, 0);
 						out.vec2 (tileUV.x, tileUV.height);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
 
 					}
 
@@ -1333,7 +1338,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					transform.append (viewProj);
 					matrixTranspose(transform);
 
-					var texture = bitmapDataTexture (cmd.sheet.__bitmap);
+					var texture = bitmapDataTexture (sheet.__bitmap);
 
 					setBlendState (blendMode);
 					ctx.bindShader (shaderDefault);
@@ -1344,7 +1349,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					ctx.setIndexSource (indexBuffer);
 					ctx.setTexture (0, texture);
 					ctx.setTextureAddressMode (0, Clamp, Clamp);
-					if (cmd.smooth) {
+					if (smooth) {
 						ctx.setTextureFilter (0, TextureFilter.Linear, TextureFilter.Linear);
 					} else {
 						ctx.setTextureFilter (0, TextureFilter.Nearest, TextureFilter.Nearest);
