@@ -73,8 +73,8 @@ class ConsoleRenderer extends AbstractRenderer {
 	private var textures = new Array<Texture> ();
 
 	private var scissorRect:Array<Float32> = [0, 0, 0, 0];
-	private var viewProj:Matrix4;
-	private var transform:Matrix4;
+	private var viewProj = new Matrix4();
+	private var transform = new Matrix4();
 
 	private var hasFill = false;
 	private var fillBitmap:BitmapData = null;
@@ -102,6 +102,9 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private var blendMode:BlendMode = NORMAL;
 	private var clipRect:Rectangle = null;
+
+	private var tempColor:Array<Float32> = [1, 1, 1, 1];
+	private var tempRectangle = new Rectangle(0, 0, 0, 0);
 
 	#if !console_pc
 	private static var pixelOffsetX:Float = 0.0;
@@ -180,7 +183,8 @@ class ConsoleRenderer extends AbstractRenderer {
 	
 	public override function render (stage:Stage):Void {
 
-		viewProj = Matrix4.createOrtho (
+		matrixOrtho(
+			viewProj,
 			0 + pixelOffsetX,
 			width + pixelOffsetX,
 			height + pixelOffsetY,
@@ -197,9 +201,9 @@ class ConsoleRenderer extends AbstractRenderer {
 		if (stage.__clearBeforeRender) {
 
 			ctx.clear (
-				Std.int (stage.__colorSplit[0] * 0xff),
-				Std.int (stage.__colorSplit[1] * 0xff),
-				Std.int (stage.__colorSplit[2] * 0xff),
+				convertInt (stage.__colorSplit[0] * 0xff),
+				convertInt (stage.__colorSplit[1] * 0xff),
+				convertInt (stage.__colorSplit[2] * 0xff),
 				0xff
 			);
 
@@ -255,16 +259,16 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 
 		var prevClipRect = clipRect;
-		if (object.scrollRect != null) {
+		if (object.__scrollRect != null) {
 			clipRect = new Rectangle (
-				object.scrollRect.x,
-				object.scrollRect.y,
-				object.scrollRect.width,
-				object.scrollRect.height
+				object.__scrollRect.x,
+				object.__scrollRect.y,
+				object.__scrollRect.width,
+				object.__scrollRect.height
 			);
 			clipRect.__transform (clipRect, object.__getWorldTransform ());
 			if (prevClipRect != null) {
-				clipRect = clipRect.intersection(prevClipRect);
+				rectangleIntersection(clipRect, prevClipRect);
 			}
 		}
 
@@ -296,7 +300,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		}
 
-		if (object.scrollRect != null) {
+		if (object.__scrollRect != null) {
 			clipRect = prevClipRect;	
 		}
 		blendMode = prevBlendMode;
@@ -337,7 +341,8 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		object.__getWorldTransform ();
 		var matrix = object.__worldTransform;
-		transform = Matrix4.createABCD (
+		matrixABCD(
+			transform,
 			matrix.a,
 			matrix.b,
 			matrix.c,
@@ -448,10 +453,15 @@ class ConsoleRenderer extends AbstractRenderer {
 			return;
 		}
 
-		var viewport = new Rectangle (0, 0, this.width, this.height);
-		viewport = viewport.intersection (clipRect);
+		var viewport = tempRectangle;
+		viewport.x = 0;
+		viewport.y = 0;
+		viewport.width = this.width;
+		viewport.height = this.height;
+		rectangleIntersection(viewport, clipRect);
 
-		viewProj = Matrix4.createOrtho (
+		matrixOrtho(
+			viewProj,
 			Math.floor (viewport.x) + pixelOffsetX,
 			Math.floor (viewport.x) + Math.ceil (viewport.width) + pixelOffsetX,
 			Math.floor (viewport.y) + Math.ceil (viewport.height) + pixelOffsetY,
@@ -479,7 +489,8 @@ class ConsoleRenderer extends AbstractRenderer {
 			return;
 		}
 
-		viewProj = Matrix4.createOrtho (
+		matrixOrtho(
+			viewProj,
 			0 + pixelOffsetX,
 			this.width + pixelOffsetX,
 			this.height + pixelOffsetY,
@@ -502,11 +513,15 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		setObjectTransform (object);
 		transform.append (viewProj);
-		transform.transpose ();
+		matrixTranspose(transform);
 
 		var w = bitmap.width;
 		var h = bitmap.height;
-		var color:Array<cpp.Float32> = [1, 1, 1, object.__worldAlpha];
+		var color:Array<Float32> = tempColor;
+		color[0] = 1.0;
+		color[1] = 1.0;
+		color[2] = 1.0;
+		color[3] = object.__worldAlpha;
 
 		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, 4);
 		var out = vertexBuffer.lock ();
@@ -627,13 +642,19 @@ class ConsoleRenderer extends AbstractRenderer {
 	// div divides an integer by an integer using integer math.
 	// Normally in haxe, Int divided by Int returns Float. Can't seem to be
 	// avoided even with cast() or Std.int()
-	private inline function div (a:Int, b:Int):Int {
+	private inline static function div (a:Int, b:Int):Int {
 
 		return untyped __cpp__ ("{0} / {1}", a, b);
 
 	}
 
 
+	// Std.int is a bit indirect. Prevents possible optimizations.
+	private inline static function convertInt (f:Float):Int {
+
+		return untyped __cpp__ ("(int){0}", f);
+
+	}
 
 
 	private function drawFill (object:DisplayObject) {
@@ -648,7 +669,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		setObjectTransform (object);
 		transform.append (viewProj);
-		transform.transpose ();
+		matrixTranspose(transform);
 
 		var vertexCount = div (points.length, 2);
 		var indexCount = (vertexCount - 2) * 3;
@@ -685,7 +706,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private function drawStroke (object:DisplayObject) {
 
-		var numPoints = Std.int (points.length / 2);
+		var numPoints = convertInt (points.length / 2);
 		if (!hasStroke || numPoints < 2) {
 			return;
 		}
@@ -704,7 +725,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		setObjectTransform (object);
 		transform.append (viewProj);
-		transform.transpose ();
+		matrixTranspose(transform);
 
 		// TODO(james4k): closed paths should form a joint, and have no caps
 		var numSegments = numPoints - 1;
@@ -949,7 +970,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						setObjectTransform (object);
 						transform.append (viewProj);
-						transform.transpose ();
+						matrixTranspose(transform);
 
 						var m:Matrix = new Matrix ();
 						if (fillBitmap != null) {
@@ -962,7 +983,11 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var w = cmd.width;
 						var h = cmd.height;
-						var color:Array<cpp.Float32> = [1, 1, 1, object.__worldAlpha];
+						var color:Array<cpp.Float32> = tempColor;
+						color[0] = 1.0;
+						color[1] = 1.0;
+						color[2] = 1.0;
+						color[3] = object.__worldAlpha;
 
 						var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, 4);
 						var out = vertexBuffer.lock ();
@@ -1007,7 +1032,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						setObjectTransform (object);
 						transform.append (viewProj);
-						transform.transpose ();
+						matrixTranspose(transform);
 
 						var vertexBuffer = transientVertexBuffer (VertexDecl.Position, 4);	
 						var out = vertexBuffer.lock ();
@@ -1062,7 +1087,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 							setObjectTransform (object);
 							transform.append (viewProj);
-							transform.transpose ();
+							matrixTranspose(transform);
 
 							var vertexCount = div (points.length, 2);
 							var indexCount = triangles.length;
@@ -1306,7 +1331,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 					setObjectTransform (object);
 					transform.append (viewProj);
-					transform.transpose ();
+					matrixTranspose(transform);
 
 					var texture = bitmapDataTexture (cmd.sheet.__bitmap);
 
@@ -1343,7 +1368,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 					setObjectTransform (object);
 					transform.append (viewProj);
-					transform.transpose ();
+					matrixTranspose(transform);
 
 					var texture = bitmapDataTexture (fillBitmap);
 
@@ -1441,7 +1466,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 			setObjectTransform (object);
 			transform.append (viewProj);
-			transform.transpose ();
+			matrixTranspose(transform);
 
 			var vertexCount = div (points.length, 2) + 1;
 			var indexCount = (vertexCount - 2) * 3;
@@ -1477,7 +1502,126 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	}
 
+
+	// matrixOrtho is a duplicate of Matrix4.createOrtho without Dynamic allocs/boxing.
+	private static function matrixOrtho(dest:Matrix4, x0:Float, x1:Float, y0:Float, y1:Float, zNear:Float, zFar:Float):Void {
+
+		var sx = 1.0 / (x1 - x0);
+		var sy = 1.0 / (y1 - y0);
+		var sz = 1.0 / (zFar - zNear);
+
+		dest[0] = 2.0 * sx;
+		dest[1] = 0.0;
+		dest[2] = 0.0;
+		dest[3] = 0.0;
+
+		dest[4] = 0.0;
+		dest[5] = 2.0 * sy;
+		dest[6] = 0.0;
+		dest[7] = 0.0;
+
+		dest[8] = 0.0;
+		dest[9] = 0.0;
+		dest[10] = -2.0 * sz;
+		dest[11] = 0.0;
+
+		dest[12] = -(x0 + x1) * sx;
+		dest[13] = -(y0 + y1) * sy;
+		dest[14] = -(zNear + zFar) * sz;
+		dest[15] = 1.0;
+
+	}
+
+
+	// matrixABCD is a duplicate of Matrix4.createABCD without Dynamic allocs/boxing.
+	private static function matrixABCD(dest:Matrix4, a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
+
+		dest[0] = a;
+		dest[1] = b;
+		dest[2] = 0.0;
+		dest[3] = 0.0;
+
+		dest[4] = c;
+		dest[5] = d;
+		dest[6] = 0.0;
+		dest[7] = 0.0;
+
+		dest[8] = 0.0;
+		dest[9] = 0.0;
+		dest[10] = 1.0;
+		dest[11] = 0.0;
+
+		dest[12] = tx;
+		dest[13] = ty;
+		dest[14] = 0.0;
+		dest[15] = 1.0;
+
+	}
+
+
+	// matrixTranspose is a duplicate of Matrix4.transpose without extra allocations.
+	// TODO(james4k): shouldn't need to transpose in most cases
+	private static function matrixTranspose(dest:Matrix4):Void {
+
+		var orig1 = dest[1];
+		var orig2 = dest[2];
+		var orig3 = dest[3];
+		var orig4 = dest[4];
+		var orig6 = dest[6];
+		var orig7 = dest[7];
+		var orig8 = dest[8];
+		var orig9 = dest[9];
+		var orig11 = dest[11];
+		var orig12 = dest[12];
+		var orig13 = dest[13];
+		var orig14 = dest[14];
+		dest[1] = orig4;
+		dest[2] = orig8;
+		dest[3] = orig12;
+		dest[4] = orig1;
+		dest[6] = orig9;
+		dest[7] = orig13;
+		dest[8] = orig2;
+		dest[9] = orig6;
+		dest[11] = orig14;
+		dest[12] = orig3;
+		dest[13] = orig7;
+		dest[14] = orig11;
+
+	}
+
+
+	// rectangleIntersection is a duplicate of Rectangle.intersection without extra allocations.
+	private static function rectangleIntersection(dest:Rectangle, other:Rectangle):Void {
+
+		var x0 = (dest.x < other.x) ? other.x : dest.x;
+		var x1 = (dest.right > other.right) ? other.right : dest.right;
+
+		if (x1 <= x0) {
+			dest.x = 0;
+			dest.y = 0;
+			dest.width = 0;
+			dest.height = 0;
+			return;
+		}
+
+		var y0 = (dest.y < other.y) ? other.y : dest.y;
+		var y1 = (dest.bottom > other.bottom) ? other.bottom : dest.bottom;
+
+		if (y1 <= y0) {
+			dest.x = 0;
+			dest.y = 0;
+			dest.width = 0;
+			dest.height = 0;
+			return;
+		}
+
+		dest.x = x0;
+		dest.y = y0;
+		dest.width = x1 - x0;
+		dest.height = y1 - y0;
 	
+	}
 	
 }
 
