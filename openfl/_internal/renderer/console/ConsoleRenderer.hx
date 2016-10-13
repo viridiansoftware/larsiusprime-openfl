@@ -356,6 +356,9 @@ class ConsoleRenderer extends AbstractRenderer {
 			matrix.tx,
 			matrix.ty
 		);
+		matrixMultiply(transform, transform, viewProj);
+		// TODO(james4k): remove need to transpose
+		matrixTranspose(transform);
 
 	}
 
@@ -522,8 +525,6 @@ class ConsoleRenderer extends AbstractRenderer {
 		beginClipRect ();
 
 		setObjectTransform (object);
-		transform.append (viewProj);
-		matrixTranspose(transform);
 
 		var w = bitmap.width;
 		var h = bitmap.height;
@@ -678,8 +679,6 @@ class ConsoleRenderer extends AbstractRenderer {
 		//PolyK.triangulate (triangles, points);
 
 		setObjectTransform (object);
-		transform.append (viewProj);
-		matrixTranspose(transform);
 
 		var vertexCount = div (points.length, 2);
 		var indexCount = (vertexCount - 2) * 3;
@@ -734,8 +733,6 @@ class ConsoleRenderer extends AbstractRenderer {
 		// TODO(james4k): square/butt caps
 
 		setObjectTransform (object);
-		transform.append (viewProj);
-		matrixTranspose(transform);
 
 		// TODO(james4k): closed paths should form a joint, and have no caps
 		var numSegments = numPoints - 1;
@@ -979,8 +976,6 @@ class ConsoleRenderer extends AbstractRenderer {
 					if (fillBitmap != null) {
 
 						setObjectTransform (object);
-						transform.append (viewProj);
-						matrixTranspose(transform);
 
 						var m:Matrix = new Matrix ();
 						if (fillBitmap != null) {
@@ -1041,8 +1036,6 @@ class ConsoleRenderer extends AbstractRenderer {
 						// TODO(james4k): replace moveTo/lineTo calls
 
 						setObjectTransform (object);
-						transform.append (viewProj);
-						matrixTranspose(transform);
 
 						var vertexBuffer = transientVertexBuffer (VertexDecl.Position, 4);	
 						var out = vertexBuffer.lock ();
@@ -1096,8 +1089,6 @@ class ConsoleRenderer extends AbstractRenderer {
 						if (triangles.length > 0) {
 
 							setObjectTransform (object);
-							transform.append (viewProj);
-							matrixTranspose(transform);
 
 							var vertexCount = div (points.length, 2);
 							var indexCount = triangles.length;
@@ -1345,8 +1336,6 @@ class ConsoleRenderer extends AbstractRenderer {
 					indexBuffer.unlock ();
 
 					setObjectTransform (object);
-					transform.append (viewProj);
-					matrixTranspose(transform);
 
 					var texture = bitmapDataTexture (sheet.__bitmap);
 
@@ -1382,8 +1371,6 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 
 					setObjectTransform (object);
-					transform.append (viewProj);
-					matrixTranspose(transform);
 
 					var texture = bitmapDataTexture (fillBitmap);
 
@@ -1480,8 +1467,6 @@ class ConsoleRenderer extends AbstractRenderer {
 			//PolyK.triangulate (triangles, points);
 
 			setObjectTransform (object);
-			transform.append (viewProj);
-			matrixTranspose(transform);
 
 			var vertexCount = div (points.length, 2) + 1;
 			var indexCount = (vertexCount - 2) * 3;
@@ -1632,6 +1617,41 @@ class ConsoleRenderer extends AbstractRenderer {
 		dest[13] = ty;
 		dest[14] = 0.0;
 		dest[15] = 1.0;
+
+	}
+
+
+	// matrixMultiply is a duplicate of Matrix4.append without extra allocations.
+	private static function matrixMultiply(dest:Matrix4, a:Matrix4, b:Matrix4):Void {
+
+		var m111:Float = a[0], m121:Float = a[4], m131:Float = a[8], m141:Float = a[12],
+			m112:Float = a[1], m122:Float = a[5], m132:Float = a[9], m142:Float = a[13],
+			m113:Float = a[2], m123:Float = a[6], m133:Float = a[10], m143:Float = a[14],
+			m114:Float = a[3], m124:Float = a[7], m134:Float = a[11], m144:Float = a[15],
+			m211:Float = b[0], m221:Float = b[4], m231:Float = b[8], m241:Float = b[12],
+			m212:Float = b[1], m222:Float = b[5], m232:Float = b[9], m242:Float = b[13],
+			m213:Float = b[2], m223:Float = b[6], m233:Float = b[10], m243:Float = b[14],
+			m214:Float = b[3], m224:Float = b[7], m234:Float = b[11], m244:Float = b[15];
+
+		dest[0] = m111 * m211 + m112 * m221 + m113 * m231 + m114 * m241;
+		dest[1] = m111 * m212 + m112 * m222 + m113 * m232 + m114 * m242;
+		dest[2] = m111 * m213 + m112 * m223 + m113 * m233 + m114 * m243;
+		dest[3] = m111 * m214 + m112 * m224 + m113 * m234 + m114 * m244;
+
+		dest[4] = m121 * m211 + m122 * m221 + m123 * m231 + m124 * m241;
+		dest[5] = m121 * m212 + m122 * m222 + m123 * m232 + m124 * m242;
+		dest[6] = m121 * m213 + m122 * m223 + m123 * m233 + m124 * m243;
+		dest[7] = m121 * m214 + m122 * m224 + m123 * m234 + m124 * m244;
+
+		dest[8] = m131 * m211 + m132 * m221 + m133 * m231 + m134 * m241;
+		dest[9] = m131 * m212 + m132 * m222 + m133 * m232 + m134 * m242;
+		dest[10] = m131 * m213 + m132 * m223 + m133 * m233 + m134 * m243;
+		dest[11] = m131 * m214 + m132 * m224 + m133 * m234 + m134 * m244;
+
+		dest[12] = m141 * m211 + m142 * m221 + m143 * m231 + m144 * m241;
+		dest[13] = m141 * m212 + m142 * m222 + m143 * m232 + m144 * m242;
+		dest[14] = m141 * m213 + m142 * m223 + m143 * m233 + m144 * m243;
+		dest[15] = m141 * m214 + m142 * m224 + m143 * m234 + m144 * m244;
 
 	}
 
