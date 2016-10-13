@@ -1560,6 +1560,9 @@ class ConsoleRenderer extends AbstractRenderer {
 			var ptrWorkCount = cpp.Pointer.addressOf (workCount);
 			ptrWorkCount.atomicDec ();
 
+			// avoid keeping something alive via GC's conservative stack scan
+			work = null;
+
 		}
 
 	}
