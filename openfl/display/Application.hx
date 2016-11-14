@@ -61,7 +61,7 @@ class Application extends LimeApplication {
 		
 		#if crashdumper
 		
-		lime.app.Event.dispatchErrorEventCallback = __dispatchErrorEvent;
+		LimeApplication.dispatchErrorEventCallback = __dispatchErrorEvent;
 		
 		#end
 	}
