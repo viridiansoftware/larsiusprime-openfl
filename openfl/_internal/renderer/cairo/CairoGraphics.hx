@@ -1189,7 +1189,10 @@ class CairoGraphics {
 		#if lime_cairo
 		CairoGraphics.graphics = graphics;
 		
-		if (!graphics.__dirty) return;
+		// TODO(james4k): this prevents drawing in BitmapData.draw. probably
+		// should be drawing the cached bitmap instead of just returning, but
+		// commenting this out works well enough for us, for now.
+		//if (!graphics.__dirty) return;
 		
 		bounds = graphics.__bounds;
 		
