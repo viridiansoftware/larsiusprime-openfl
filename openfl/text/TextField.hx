@@ -445,21 +445,22 @@ class TextField extends InteractiveObject {
 		var startIndex = __caretIndex < __selectionIndex ? __caretIndex : __selectionIndex;
 		var endIndex = __caretIndex > __selectionIndex ? __caretIndex : __selectionIndex;
 		
-		replaceText (startIndex, endIndex, value);
+		var result = replaceText (startIndex, endIndex, value);
 		
-		__caretIndex = startIndex + value.length;
+		__caretIndex = startIndex + result.length;
 		__selectionIndex = __caretIndex;
-		
 	}
 	
 	
-	public function replaceText (beginIndex:Int, endIndex:Int, newText:String):Void {
+	public function replaceText (beginIndex:Int, endIndex:Int, newText:String):String {
 		
-		if (endIndex < beginIndex || beginIndex < 0 || endIndex > __textEngine.text.length || newText == null) return;
+		newText = __textEngine.restrictText(newText);
+		
+		if (endIndex < beginIndex || beginIndex < 0 || endIndex > __textEngine.text.length || newText == null) return newText;
 		
 		__textEngine.text = __textEngine.text.substring (0, beginIndex) + newText + __textEngine.text.substring (endIndex);
 		
-		var offset = newText.length - (endIndex - beginIndex);
+		var offset = __textEngine.text.length - (endIndex - beginIndex);
 		
 		var i = 0;
 		var range;
@@ -494,6 +495,7 @@ class TextField extends InteractiveObject {
 		__dirty = true;
 		__layoutDirty = true;
 		
+		return newText;
 	}
 	
 	
@@ -1565,14 +1567,16 @@ class TextField extends InteractiveObject {
 			
 		}
 		
+		__isHTML = false;
+		
+		__textEngine.text = value;
+		
 		var range = __textEngine.textFormatRanges[0];
 		range.format = __textFormat;
 		range.start = 0;
-		range.end = value.length;
+		range.end = __textEngine.text.length;
 		
-		__isHTML = false;
-		
-		return __textEngine.text = value;
+		return __textEngine.text;
 		
 	}
 	

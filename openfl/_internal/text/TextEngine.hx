@@ -1170,6 +1170,24 @@ class TextEngine {
 	}
 	
 	
+	public function restrictText (value:String):String
+	{
+		if (__restrictRegexp != null) {
+			
+			value = __restrictRegexp.split (value).join ('');
+			
+		}
+		
+		if (maxChars > 0 && value.length > maxChars) {
+			
+			value = value.substr (0, maxChars);
+			
+		}
+		
+		return value;
+	}
+	
+	
 	private function setTextAlignment ():Void {
 		
 		var lineIndex = -1;
@@ -1336,19 +1354,11 @@ class TextEngine {
 	
 	private function set_text (value:String):String {
 		
-		if (value == null) return text = value;
-		
-		if (__restrictRegexp != null) {
-			
-			text = __restrictRegexp.split (text).join ('');
-			
+		if (value == null) {
+			return text = value;
 		}
 		
-		if (maxChars > 0 && text.length > maxChars) {
-			
-			text = text.substr (0, maxChars);
-			
-		}
+		text = restrictText(value);
 		
 		return text;
 		
