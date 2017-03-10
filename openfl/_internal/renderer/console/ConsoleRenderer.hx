@@ -128,7 +128,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		whiteTexture = ctx.createTexture (
 			TextureFormat.ARGB,
 			1, 1,
-			cpp.Pointer.addressOf (white).reinterpret ()
+			cast cpp.Pointer.addressOf (white).reinterpret ()
 		);
 
 	}
