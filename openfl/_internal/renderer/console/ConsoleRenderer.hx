@@ -410,6 +410,10 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private function bitmapDataTexture (bitmap:BitmapData):Texture {
 
+		if (bitmap == null || bitmap.image == null) {
+			return whiteTexture;
+		}
+
 		if (bitmap.__texture.valid) {
 
 			var image = bitmap.image;
@@ -521,6 +525,10 @@ class ConsoleRenderer extends AbstractRenderer {
 
 
 	private function drawBitmapData (object:DisplayObject, bitmap:BitmapData, smoothing:Bool) {
+
+		if (bitmap == null || bitmap.image == null) {
+			return;
+		}
 
 		beginClipRect ();
 
@@ -750,11 +758,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, vertexCount);	
 		var indexBuffer = transientIndexBuffer (indexCount);
-		var texture = if (lineBitmap != null) {
-			bitmapDataTexture (lineBitmap);
-		} else {
-			whiteTexture;
-		}
+		var texture = bitmapDataTexture (lineBitmap);
 		var bitmapMatrix:Matrix = new Matrix ();
 		if (lineBitmap != null) {
 			if (lineBitmapMatrix != null) {
