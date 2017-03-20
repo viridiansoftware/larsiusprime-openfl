@@ -310,7 +310,8 @@ class ConsoleRenderer extends AbstractRenderer {
 			matrix.c,
 			matrix.d,
 			matrix.tx,
-			matrix.ty
+			matrix.ty,
+			transform
 		);
 
 	}
