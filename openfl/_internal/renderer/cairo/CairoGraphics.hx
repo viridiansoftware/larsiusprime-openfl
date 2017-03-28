@@ -3,6 +3,7 @@ package openfl._internal.renderer.cairo;
 
 import lime.graphics.cairo.Cairo;
 import lime.graphics.cairo.CairoExtend;
+import lime.graphics.cairo.CairoFilter;
 import lime.graphics.cairo.CairoImageSurface;
 import lime.graphics.cairo.CairoPattern;
 import lime.graphics.cairo.CairoSurface;
@@ -887,6 +888,8 @@ class CairoGraphics {
 					var useRotation = (c.flags & Graphics.TILE_ROTATION) > 0;
 					var offsetX = bounds.x;
 					var offsetY = bounds.y;
+					var smooth = c.smooth;
+					var tileData = c.tileData;
 					
 					var useTransform = (c.flags & Graphics.TILE_TRANS_2x2) > 0;
 					var useRGB = (c.flags & Graphics.TILE_RGB) > 0;
@@ -913,7 +916,7 @@ class CairoGraphics {
 					if (useRGB) { rgbIndex = numValues; numValues += 3; }
 					if (useAlpha) { alphaIndex = numValues; numValues ++; }
 					
-					var totalCount = c.tileData.length;
+					var totalCount = tileData.length;
 					if (c.count >= 0 && totalCount > c.count) totalCount = c.count;
 					var itemCount = Std.int (totalCount / numValues);
 					var index = 0;
@@ -939,12 +942,14 @@ class CairoGraphics {
 						cairo.operator = OVERLAY;
 						
 					}
+
+					var pattern = CairoPattern.createForSurface (surface);
 					
 					while (index < totalCount) {
 						
 						#if neko
 						
-						var f:Float = c.tileData[index + 2];
+						var f:Float = tileData[index + 2];
 						var i = 0;
 						
 						if (f != null) {
@@ -955,7 +960,7 @@ class CairoGraphics {
 						
 						#else
 						
-						var i = Std.int (c.tileData[index + 2]);
+						var i = Std.int (tileData[index + 2]);
 						
 						#end
 						
@@ -973,12 +978,12 @@ class CairoGraphics {
 						} else if (useRect) {
 							
 							rect = c.sheet.__rectTile;
-							rect.setTo (c.tileData[index + 2], c.tileData[index + 3], c.tileData[index + 4], c.tileData[index + 5]);
+							rect.setTo (tileData[index + 2], tileData[index + 3], tileData[index + 4], tileData[index + 5]);
 							center = c.sheet.__point;
 							
 							if (useOrigin) {
 								
-								center.setTo (c.tileData[index + 6], c.tileData[index + 7]);
+								center.setTo (tileData[index + 6], tileData[index + 7]);
 								
 							} else {
 								
@@ -998,37 +1003,74 @@ class CairoGraphics {
 							
 							if (useTransform) {
 								
-								var matrix = new Matrix3 (c.tileData[index + transformIndex], c.tileData[index + transformIndex + 1], c.tileData[index + transformIndex + 2], c.tileData[index + transformIndex + 3], 0, 0);
+								var matrix = new Matrix3 (tileData[index + transformIndex], tileData[index + transformIndex + 1], tileData[index + transformIndex + 2], tileData[index + transformIndex + 3], 0, 0);
 								cairo.matrix = matrix;
 								
 							}
+
+							var red = 1.0;
+							var green = 1.0;
+							var blue = 1.0;
+							var alpha = 1.0;
+
+							if (useRGB) {
+
+								red   = tileData[index + rgbIndex + 0];
+								green = tileData[index + rgbIndex + 1];
+								blue  = tileData[index + rgbIndex + 2];
+
+							}
+
+							if (useAlpha) {
+
+								alpha = tileData[index + alphaIndex];
+
+							}
+
+							pattern.filter = smooth ? BILINEAR : NEAREST;
+							pattern.matrix = new Matrix3 (1, 0, 0, 1, rect.x + 0.5, rect.y + 0.5);
 							
-							cairo.translate (c.tileData[index] - offsetX, c.tileData[index + 1] - offsetY);
+							cairo.translate (tileData[index] - offsetX, tileData[index + 1] - offsetY);
 							
 							if (useRotation) {
 								
-								cairo.rotate (c.tileData[index + rotationIndex]);
+								cairo.rotate (tileData[index + rotationIndex]);
 								
 							}
 							
 							if (useScale) {
 								
-								var scale = c.tileData[index + scaleIndex];
+								var scale = tileData[index + scaleIndex];
 								cairo.scale (scale, scale);
 								
 							}
-							
-							cairo.setSourceSurface (surface, 0, 0);
-							
-							if (useAlpha) {
-								
-								if (!hitTesting) cairo.paintWithAlpha (c.tileData[index + alphaIndex]);
-								
-							} else {
-								
-								if (!hitTesting) cairo.paint ();
-								
-							}
+
+							var wct = graphics.__owner.__worldColorTransform;
+
+							cairo.pushGroup ();
+							cairo.rectangle (0, 0, rect.width, rect.height);
+							cairo.source = pattern;
+							cairo.fillPreserve ();
+							cairo.operator = MULTIPLY;
+							cairo.source = CairoPattern.createRGBA (
+								red * wct.redMultiplier,
+								green * wct.greenMultiplier,
+								blue * wct.blueMultiplier,
+								alpha * wct.alphaMultiplier
+							);
+							#if 0
+							cairo.fillPreserve ();
+							cairo.operator = ADD;
+							cairo.source = CairoPattern.createRGBA (
+								wct.redOffset,
+								wct.greenOffset,
+								wct.blueOffset,
+								wct.alphaOffset
+							);
+							#end
+							cairo.fill ();
+							cairo.popGroupToSource ();
+							cairo.mask (pattern);
 							
 							//cairo.restore ();
 							
@@ -1147,6 +1189,9 @@ class CairoGraphics {
 		#if lime_cairo
 		CairoGraphics.graphics = graphics;
 		
+		// TODO(james4k): this prevents drawing in BitmapData.draw. probably
+		// should be drawing the cached bitmap instead of just returning, but
+		// commenting this out works well enough for us, for now.
 		if (!graphics.__dirty) return;
 		
 		bounds = graphics.__bounds;
