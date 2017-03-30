@@ -257,7 +257,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	}
 
-	
+	@:access(openfl.display.DisplayObject)
 	private function renderDisplayObject (object:DisplayObject) {
 
 		if (!object.__renderable || object.__worldAlpha <= 0) {
@@ -285,22 +285,22 @@ class ConsoleRenderer extends AbstractRenderer {
 			setBlendState(objBlendMode);
 		}
 
-		if (Std.is (object, DisplayObjectContainer)) {
+		if (object.__isDisplayObjectContainer) { //if (Std.is (object, DisplayObjectContainer)) {
 
 			renderDisplayObjectContainer (cast (object));
 
-		} else if (Std.is (object, Bitmap)) {
+		} else if (object.__displayObjectType == DisplayObject.BITMAP) { //} else if (Std.is (object, Bitmap)) {
 
 			var b:Bitmap = cast (object);
 			if (b.bitmapData != null) {
 				drawBitmapData (b, b.bitmapData, b.smoothing);
 			}
 
-		} else if (Std.is (object, Shape)) {
+		} else if (object.__displayObjectType == DisplayObject.SHAPE) {//} else if (Std.is (object, Shape)) {
 
 			renderShape_ (cast (object));
 
-		} else if (Std.is (object, TextField)) {
+		} else if (object.__displayObjectType == DisplayObject.TEXT_FIELD) {//} else if (Std.is (object, TextField)) {
 
 			renderTextField (cast (object));
 
@@ -314,9 +314,10 @@ class ConsoleRenderer extends AbstractRenderer {
 	}
 
 
+	@:access(openfl.display.DisplayObject)
 	private function renderDisplayObjectContainer (object:DisplayObjectContainer) {
 
-		if (Std.is (object, Sprite)) {
+		if (object.__displayObjectType == DisplayObject.SPRITE) { //if (Std.is (object, Sprite)) {
 
 			renderSprite (cast (object));
 		}
