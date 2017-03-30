@@ -31,6 +31,8 @@ class Sprite extends DisplayObjectContainer {
 		useHandCursor = true;
 		loaderInfo = LoaderInfo.create (null);
 		
+		__displayObjectType = @:privateAccess DisplayObject.SPRITE;
+		
 	}
 	
 	

@@ -46,6 +46,8 @@ class Bitmap extends DisplayObject {
 			
 		}
 		
+		__displayObjectType = @:privateAccess DisplayObject.BITMAP;
+		
 	}
 	
 	

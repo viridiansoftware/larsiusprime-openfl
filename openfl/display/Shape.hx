@@ -14,6 +14,8 @@ class Shape extends DisplayObject {
 		
 		super ();
 		
+		__displayObjectType = @:privateAccess DisplayObject.SHAPE;
+		
 	}
 	
 	

@@ -113,6 +113,8 @@ class TextField extends InteractiveObject {
 		
 		addEventListener (MouseEvent.MOUSE_DOWN, this_onMouseDown);
 		
+		__displayObjectType = @:privateAccess DisplayObject.TEXT_FIELD;
+		
 	}
 	
 	

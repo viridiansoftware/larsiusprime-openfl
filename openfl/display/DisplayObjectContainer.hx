@@ -36,6 +36,9 @@ class DisplayObjectContainer extends InteractiveObject {
 		__children = new Array<DisplayObject> ();
 		__removedChildren = new Array<DisplayObject> ();
 		
+		__displayObjectType = @:privateAccess DisplayObject.DISPLAY_OBJECT_CONTAINER;
+		__isDisplayObjectContainer = true;
+		
 	}
 	
 	

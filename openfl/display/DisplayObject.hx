@@ -124,6 +124,16 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if !disa
 	private var __cacheGLMatrix:Matrix;
 	private var __updateFilters:Bool;
 	
+	private var __displayObjectType:Int = DISPLAY_OBJECT;
+	private var __isDisplayObjectContainer:Bool = false;
+	
+	private static inline var DISPLAY_OBJECT:Int = 0;
+	private static inline var DISPLAY_OBJECT_CONTAINER:Int = 1;
+	private static inline var BITMAP:Int = 2;
+	private static inline var SHAPE:Int = 3;
+	private static inline var TEXT_FIELD:Int = 4;
+	private static inline var SPRITE:Int = 5;
+	
 	#if (js && html5)
 	private var __canvas:CanvasElement;
 	private var __context:CanvasRenderingContext2D;
@@ -152,6 +162,8 @@ class DisplayObject extends EventDispatcher implements IBitmapDrawable #if !disa
 		#end
 		
 		name = "instance" + (++__instanceCount);
+		
+		__displayObjectType = DISPLAY_OBJECT;
 		
 	}
 	
