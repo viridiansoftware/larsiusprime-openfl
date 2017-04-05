@@ -16,6 +16,8 @@ import openfl.geom.Rectangle;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
 
+import unifill.Unifill;
+
 @:access(openfl.display.BitmapData)
 @:access(openfl.display.Graphics)
 @:access(openfl.text.TextField)
@@ -284,7 +286,8 @@ class CairoTextField {
 								// TODO: draw only once
 								
 								cairo.moveTo (scrollX + start.x, group.offsetY + group.ascent + scrollY);
-								cairo.showText (text.substring (selectionStart, selectionEnd));
+								//cairo.showText (text.substring (selectionStart, selectionEnd));
+								cairo.showText (Unifill.uSubstring(text, group.startIndex, group.endIndex));
 								
 							}
 							
