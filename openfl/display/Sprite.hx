@@ -1,4 +1,4 @@
-package openfl.display; #if !openfl_legacy
+package openfl.display;
 
 
 import lime.ui.MouseCursor;
@@ -156,8 +156,3 @@ class Sprite extends DisplayObjectContainer {
 	
 	
 }
-
-
-#else
-typedef Sprite = openfl._legacy.display.Sprite;
-#end

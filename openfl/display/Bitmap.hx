@@ -1,4 +1,4 @@
-package openfl.display; #if !openfl_legacy
+package openfl.display;
 
 
 import openfl._internal.renderer.cairo.CairoBitmap;
@@ -150,13 +150,7 @@ class Bitmap extends DisplayObject {
 	
 	public override function __renderGL (renderSession:RenderSession):Void {
 		
-		if (__cacheAsBitmap) {
-			__cacheGL(renderSession);
-			return;
-		}
-		__preRenderGL (renderSession);
 		GLBitmap.render (this, renderSession);
-		__postRenderGL (renderSession);
 		
 	}
 	
@@ -193,20 +187,20 @@ class Bitmap extends DisplayObject {
 	
 	
 	private function set_bitmapData (value:BitmapData):BitmapData {
-
+		
 		bitmapData = value;
-
+		
 		if (__filters != null && __filters.length > 0) {
-
-			__updateFilters = true;
-
+			
+			//__updateFilters = true;
+			
 		}
-
+		
 		return bitmapData;
-
+		
 	}
-
-
+	
+	
 	private override function get_height ():Float {
 		
 		if (bitmapData != null) {
@@ -272,8 +266,3 @@ class Bitmap extends DisplayObject {
 	
 	
 }
-
-
-#else
-typedef Bitmap = openfl._legacy.display.Bitmap;
-#end

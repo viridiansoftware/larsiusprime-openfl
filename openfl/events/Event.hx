@@ -1,4 +1,4 @@
-package openfl.events; #if !openfl_legacy
+package openfl.events;
 
 
 import haxe.macro.Expr;
@@ -153,8 +153,3 @@ class Event {
 	
 	
 }
-
-
-#else
-typedef Event = openfl._legacy.events.Event;
-#end

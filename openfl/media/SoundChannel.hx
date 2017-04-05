@@ -1,4 +1,4 @@
-package openfl.media; #if (!openfl_legacy || disable_legacy_audio)
+package openfl.media;
 
 
 import lime.audio.AudioSource;
@@ -185,8 +185,3 @@ import openfl.media.Sound;
 	
 	
 }
-
-
-#else
-typedef SoundChannel = openfl._legacy.media.SoundChannel;
-#end

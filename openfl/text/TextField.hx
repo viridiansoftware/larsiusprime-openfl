@@ -1,4 +1,4 @@
-package openfl.text; #if !openfl_legacy
+package openfl.text;
 
 
 import haxe.Timer;
@@ -732,30 +732,13 @@ class TextField extends InteractiveObject {
 	
 	public override function __renderGL (renderSession:RenderSession):Void {
 		
-		if (__cacheAsBitmap) {
-			__cacheGL(renderSession);
-			return;
-		}
-		
-		__preRenderGL(renderSession);
-		
-		#if !disable_cairo_graphics
-		
-		#if lime_cairo
-		CairoTextField.render (this, renderSession);
-		#else
+		#if (js && html5)
 		CanvasTextField.render (this, renderSession);
+		#elseif lime_cairo
+		CairoTextField.render (this, renderSession);
 		#end
 		
-		GLRenderer.renderBitmap (this, renderSession, __textEngine.antiAliasType != ADVANCED || __textEngine.gridFitType != PIXEL);
-		
-		#else
-		
-		//GLTextField.render (this, renderSession);
-		
-		#end
-		
-		__postRenderGL(renderSession);
+		super.__renderGL (renderSession);
 		
 	}
 	
@@ -1978,8 +1961,3 @@ class TextField extends InteractiveObject {
 	
 	
 }
-
-
-#else
-typedef TextField = openfl._legacy.text.TextField;
-#end

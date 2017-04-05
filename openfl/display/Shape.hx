@@ -1,4 +1,4 @@
-package openfl.display; #if !openfl_legacy
+package openfl.display;
 
 
 @:access(openfl.display.Graphics)
@@ -41,8 +41,3 @@ class Shape extends DisplayObject {
 	
 	
 }
-
-
-#else
-typedef Shape = openfl._legacy.display.Shape;
-#end

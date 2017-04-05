@@ -877,6 +877,7 @@ class TextEngine {
 				offsetY += heightValue;
 				offsetX = 2;
 				
+					layoutGroup.lineIndex++;
 				if (formatRange.end == breakIndex) {
 					
 					nextFormatRange ();

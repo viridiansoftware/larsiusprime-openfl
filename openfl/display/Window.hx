@@ -1,4 +1,4 @@
-package openfl.display;
+package openfl.display; #if !display
 
 
 import lime.app.Application;
@@ -23,9 +23,11 @@ class Window extends LimeWindow {
 		
 		super.create (application);
 		
-		#if (!flash && !openfl_legacy)
+		#if !flash
 		
 		stage = new Stage (this, Reflect.hasField (config, "background") ? config.background : 0xFFFFFF);
+		stage.__setLogicalSize (config.width, config.height);
+		
 		application.addModule (stage);
 		
 		#else
@@ -38,3 +40,22 @@ class Window extends LimeWindow {
 	
 	
 }
+
+
+#else
+
+
+import lime.app.Config;
+import lime.ui.Window in LimeWindow;
+
+
+extern class Window extends LimeWindow {
+	
+	
+	public function new (config:WindowConfig = null);
+	
+	
+}
+
+
+#end
