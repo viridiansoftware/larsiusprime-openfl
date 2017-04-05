@@ -21,7 +21,7 @@ class ShaderFilter extends BitmapFilter {
 	public function new(shader:Shader) {
 		super();
 		this.shader = shader;
-		__passes = 1;
+		//__passes = 1;
 	}
 	
 	override public function clone():BitmapFilter {
@@ -33,6 +33,7 @@ class ShaderFilter extends BitmapFilter {
 		return f;
 	}
 	
+	/*
 	override function __growBounds (rect:Rectangle) {
 		
 		rect.x += -leftExtension;
@@ -45,11 +46,12 @@ class ShaderFilter extends BitmapFilter {
 	override function __preparePass(pass:Int):Shader {
 		return shader;
 	}
+	*/
 
-	inline function set_bottomExtension(v) 	{ __dirty = true; return bottomExtension = v; }
-	inline function set_topExtension(v) 	{ __dirty = true; return topExtension = v; }
-	inline function set_rightExtension(v) 	{ __dirty = true; return rightExtension = v; }
-	inline function set_leftExtension(v) 	{ __dirty = true; return leftExtension = v; }
-	inline function set_shader(v) 			{ __dirty = true; return shader = v; }
+	inline function set_bottomExtension(v) 	{ /*__dirty = true;*/ return bottomExtension = v; }
+	inline function set_topExtension(v) 	{ /*__dirty = true;*/ return topExtension = v; }
+	inline function set_rightExtension(v) 	{ /*__dirty = true;*/ return rightExtension = v; }
+	inline function set_leftExtension(v) 	{ /*__dirty = true;*/ return leftExtension = v; }
+	inline function set_shader(v) 			{ /*__dirty = true;*/ return shader = v; }
 	
 }
