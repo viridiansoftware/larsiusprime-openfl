@@ -422,11 +422,17 @@ class ConsoleRenderer extends AbstractRenderer {
 
 			if (image.dirty && image.buffer.data != null) {
 
+				#if vita
 				queueWork(function():Void {
 					t.updateFromRGBA (
 						cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
 					);
 				});
+				#else
+				t.updateFromRGBA (
+					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+				);
+				#end
 
 				image.dirty = false;
 
@@ -446,11 +452,17 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		if (image.buffer.data != null) {
 
+			#if vita
 			queueWork(function():Void {
 				texture.updateFromRGBA (
 					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
 				);
 			});
+			#else
+			texture.updateFromRGBA (
+				cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+			);
+			#end
 
 		}
 
