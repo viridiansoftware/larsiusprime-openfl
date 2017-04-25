@@ -1527,7 +1527,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		if (workQueue == null)
 		{
 			workQueue = new cpp.vm.Deque<Void->Void> ();
-			//cpp.vm.Thread.create(workerThread);
+			cpp.vm.Thread.create(workerThread);
 		}
 	}
 

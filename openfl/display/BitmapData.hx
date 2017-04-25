@@ -466,17 +466,6 @@ class BitmapData implements IBitmapDrawable {
 			source = copy;
 			
 		}
-
-		if (Std.is(source, BitmapData)) {
-
-			// copy to allow for multiple threads to use source. this is a very
-			// particular hack we're using for pplease. openfl generally
-			// does not support usage from multiple threads.
-			var sourceBitmapData:BitmapData = cast source;
-			var bd = BitmapData.fromImage(sourceBitmapData.image);
-			source = bd;
-
-		}
 		
 		var surface = getSurface ();
 		var cairo = new Cairo (surface);
