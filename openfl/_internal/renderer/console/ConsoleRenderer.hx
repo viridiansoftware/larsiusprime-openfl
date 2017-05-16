@@ -1363,13 +1363,13 @@ class ConsoleRenderer extends AbstractRenderer {
 					ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
 					ctx.setVertexSource (vertexBuffer);
 					ctx.setIndexSource (indexBuffer);
-					ctx.setTexture (0, texture);
 					ctx.setTextureAddressMode (0, Clamp, Clamp);
 					if (smooth) {
 						ctx.setTextureFilter (0, TextureFilter.Linear, TextureFilter.Linear);
 					} else {
 						ctx.setTextureFilter (0, TextureFilter.Nearest, TextureFilter.Nearest);
 					}
+					ctx.setTexture (0, texture);
 					ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, itemCount * 2);
 					setBlendState (this.blendMode);
 
