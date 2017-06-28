@@ -220,7 +220,8 @@ class CairoTextField {
 					//
 					//cairo.showGlyphs (glyphs);
 					
-					cairo.showText (text.substring (group.startIndex, group.endIndex));
+					
+					cairo.showText (Unifill.uSubstring(text, group.startIndex, group.endIndex));
 					
 					if (textField.__caretIndex > -1 && textEngine.selectable) {
 						
@@ -286,7 +287,6 @@ class CairoTextField {
 								// TODO: draw only once
 								
 								cairo.moveTo (scrollX + start.x, group.offsetY + group.ascent + scrollY);
-								//cairo.showText (text.substring (selectionStart, selectionEnd));
 								cairo.showText (Unifill.uSubstring(text, group.startIndex, group.endIndex));
 								
 							}
