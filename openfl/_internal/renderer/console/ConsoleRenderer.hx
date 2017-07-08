@@ -261,7 +261,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	}
 
-	@:access(openfl.display.DisplayObject)
+	
 	private function renderDisplayObject (object:DisplayObject) {
 
 		if (!object.__renderable || object.__worldAlpha <= 0) {
@@ -289,22 +289,22 @@ class ConsoleRenderer extends AbstractRenderer {
 			setBlendState(objBlendMode);
 		}
 
-		if (object.__isDisplayObjectContainer) { //if (Std.is (object, DisplayObjectContainer)) {
+		if (Std.is (object, DisplayObjectContainer)) {
 
 			renderDisplayObjectContainer (cast (object));
 
-		} else if (object.__displayObjectType == DisplayObject.BITMAP) { //} else if (Std.is (object, Bitmap)) {
+		} else if (Std.is (object, Bitmap)) {
 
 			var b:Bitmap = cast (object);
 			if (b.bitmapData != null) {
 				drawBitmapData (b, b.bitmapData, b.smoothing);
 			}
 
-		} else if (object.__displayObjectType == DisplayObject.SHAPE) {//} else if (Std.is (object, Shape)) {
+		} else if (Std.is (object, Shape)) {
 
 			renderShape_ (cast (object));
 
-		} else if (object.__displayObjectType == DisplayObject.TEXT_FIELD) {//} else if (Std.is (object, TextField)) {
+		} else if (Std.is (object, TextField)) {
 
 			renderTextField (cast (object));
 
@@ -318,10 +318,9 @@ class ConsoleRenderer extends AbstractRenderer {
 	}
 
 
-	@:access(openfl.display.DisplayObject)
 	private function renderDisplayObjectContainer (object:DisplayObjectContainer) {
 
-		if (object.__displayObjectType == DisplayObject.SPRITE) { //if (Std.is (object, Sprite)) {
+		if (Std.is (object, Sprite)) {
 
 			renderSprite (cast (object));
 		}
@@ -562,24 +561,20 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		setColorTransform(object.__worldColorTransform);
 
-		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, 4);
+		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, 4);
 		var out = vertexBuffer.lock ();
 		out.vec3 (0, 0, 0);
 		out.vec2 (0, 0);
 		out.color(0xff, 0xff, 0xff, 0xff);
-		out.color(0, 0, 0, 0);
 		out.vec3 (0, h, 0);
 		out.vec2 (0, 1);
 		out.color(0xff, 0xff, 0xff, 0xff);
-		out.color(0, 0, 0, 0);
 		out.vec3 (w, 0, 0);
 		out.vec2 (1, 0);
 		out.color(0xff, 0xff, 0xff, 0xff);
-		out.color(0, 0, 0, 0);
 		out.vec3 (w, h, 0);
 		out.vec2 (1, 1);
 		out.color(0xff, 0xff, 0xff, 0xff);
-		out.color(0, 0, 0, 0);
 		vertexBuffer.unlock ();
 
 		var texture = bitmapDataTexture (bitmap);
@@ -784,7 +779,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		indexCount += numCaps * 3; // 1 triangle per cap
 		indexCount += numJoints * 12; // 4 triangles per joint
 
-		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, vertexCount);	
+		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, vertexCount);	
 		var indexBuffer = transientIndexBuffer (indexCount);
 		var texture = bitmapDataTexture (lineBitmap);
 		var bitmapMatrix:Matrix = new Matrix ();
@@ -1032,24 +1027,20 @@ class ConsoleRenderer extends AbstractRenderer {
 						color[2] = 1.0 * alpha;
 						color[3] = alpha;
 
-						var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, 4);
+						var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, 4);
 						var out = vertexBuffer.lock ();
 						out.vec3 (cmd.x, cmd.y, 0);
 						out.vec2 ((cmd.x)*m.a + (cmd.y)*m.c + m.tx, (cmd.x)*m.b + (cmd.y)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
-						out.color(0, 0, 0, 0);
 						out.vec3 (cmd.x, cmd.y + h, 0);
 						out.vec2 ((cmd.x)*m.a + (cmd.y+h)*m.c + m.tx, (cmd.x)*m.b + (cmd.y+h)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
-						out.color(0, 0, 0, 0);
 						out.vec3 (cmd.x + w, cmd.y, 0);
 						out.vec2 ((cmd.x+w)*m.a + (cmd.y)*m.c + m.tx, (cmd.x+w)*m.b + (cmd.y)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
-						out.color(0, 0, 0, 0);
 						out.vec3 (cmd.x + w, cmd.y + h, 0);
 						out.vec2 ((cmd.x+w)*m.a + (cmd.y+h)*m.c + m.tx, (cmd.x+w)*m.b + (cmd.y+h)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
-						out.color(0, 0, 0, 0);
 						vertexBuffer.unlock ();
 
 						var texture = bitmapDataTexture (fillBitmap);
@@ -1185,7 +1176,6 @@ class ConsoleRenderer extends AbstractRenderer {
 					var useAlpha = (flags & Tilesheet.TILE_ALPHA) != 0;
 					var useRect = (flags & Tilesheet.TILE_RECT) != 0;
 					var useOrigin = (flags & Tilesheet.TILE_ORIGIN) != 0;
-					var useRGBOffset = (flags & Tilesheet.TILE_TRANS_COLOR) != 0;
 
 					var blendMode:BlendMode = switch(flags & 0xF0000) {
 						case Tilesheet.TILE_BLEND_ADD:		ADD;
@@ -1214,7 +1204,6 @@ class ConsoleRenderer extends AbstractRenderer {
 					var transformIndex = 0;
 					var rgbIndex = 0;
 					var alphaIndex = 0;
-					var rgbOffsetIndex = 0;
 
 					var stride = 3;
 					if (useRect) {
@@ -1240,10 +1229,6 @@ class ConsoleRenderer extends AbstractRenderer {
 						alphaIndex = stride;
 						stride += 1;
 					}
-					if (useRGBOffset) {
-						rgbOffsetIndex = stride;
-						stride += 4;
-					}
 
 					var totalCount = tileData.length;
 					if (count >= 0 && totalCount > count) {
@@ -1261,7 +1246,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 					var skippedItemCount = 0;
 					var vertexCount = itemCount * 4;
-					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, vertexCount);	
+					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, vertexCount);	
 					var out = vertexBuffer.lock ();
 
 					for (itemIndex in 0...itemCount) {
@@ -1310,7 +1295,6 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var alpha = object.__worldAlpha;
 						var red:UInt8 = 255, green:UInt8 = 255, blue:UInt8 = 255;
-						var redOffset:UInt8 = 0, greenOffset:UInt8 = 0, blueOffset:UInt8 = 0, alphaOffset:UInt8 = 0;
 						var scale = 1.0;
 						var rotation = 0.0;
 						var a = 0.0, b = 0.0, c = 0.0, d = 0.0, tx = 0.0, ty = 0.0;
@@ -1345,13 +1329,6 @@ class ConsoleRenderer extends AbstractRenderer {
 							d = a;
 						}
 
-						if (useRGBOffset) {
-							redOffset    = convertInt (tileData[index + rgbOffsetIndex + 0]);
-							greenOffset  = convertInt (tileData[index + rgbOffsetIndex + 1]);
-							blueOffset   = convertInt (tileData[index + rgbOffsetIndex + 2]);
-							alphaOffset  = convertInt (tileData[index + rgbOffsetIndex + 3]);
-						}
-
 						var tx = x - (center.x * a + center.y * c);
 						var ty = y - (center.x * b + center.y * d);
 
@@ -1365,22 +1342,18 @@ class ConsoleRenderer extends AbstractRenderer {
 						out.vec3 (a*w1 + c*h1 + tx, d*h1 + b*w1 + ty, 0);
 						out.vec2 (tileUV.x, tileUV.y);
 						out.color (red, green, blue, convertInt(alpha * 0xff));
-						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 						out.vec3 (a*w0 + c*h1 + tx, d*h1 + b*w0 + ty, 0);
 						out.vec2 (tileUV.width, tileUV.y);
 						out.color (red, green, blue, convertInt(alpha * 0xff));
-						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 						out.vec3 (a*w0 + c*h0 + tx, d*h0 + b*w0 + ty, 0);
 						out.vec2 (tileUV.width, tileUV.height);
 						out.color (red, green, blue, convertInt(alpha * 0xff));
-						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 						out.vec3 (a*w1 + c*h0 + tx, d*h0 + b*w1 + ty, 0);
 						out.vec2 (tileUV.x, tileUV.height);
 						out.color (red, green, blue, convertInt(alpha * 0xff));
-						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 					}
 
@@ -1451,7 +1424,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					var indexCount = cmdIndices.length;
 					if (vertexCount <= 0 || indexCount <= 0) continue;
 
-					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, vertexCount);	
+					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, vertexCount);	
 					var out = vertexBuffer.lock ();
 					var i = 0;
 					while (i < cmd.vertices.length) {
@@ -1459,7 +1432,6 @@ class ConsoleRenderer extends AbstractRenderer {
 						out.vec2 (cmdUvtData[i], cmdUvtData[i+1]);
 						// TODO(james4k): color
 						out.color (0xff, 0xff, 0xff, 0xff);
-						out.color (0, 0, 0, 0);
 						i += 2;
 					}
 					vertexBuffer.unlock ();
@@ -1585,10 +1557,10 @@ class ConsoleRenderer extends AbstractRenderer {
 		colorMultiplier[1] = ct.greenMultiplier;
 		colorMultiplier[2] = ct.blueMultiplier;
 		colorMultiplier[3] = ct.alphaMultiplier;
-		colorOffset[0] = ct.redOffset / 255.0;
-		colorOffset[1] = ct.greenOffset / 255.0;
-		colorOffset[2] = ct.blueOffset / 255.0;
-		colorOffset[3] = ct.alphaOffset / 255.0;
+		colorOffset[0] = ct.redOffset;
+		colorOffset[1] = ct.greenOffset;
+		colorOffset[2] = ct.blueOffset;
+		colorOffset[3] = ct.alphaOffset;
 
 	}
 
