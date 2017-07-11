@@ -696,6 +696,15 @@ class ConsoleRenderer extends AbstractRenderer {
 		return untyped __cpp__ ("(int){0}", f);
 
 	}
+	
+	
+	private inline static function clamp255 (i:Int):Int {
+		
+		if (i > 255) return 255;
+		if (i < 0) return 0;
+		return i;
+		
+	}
 
 
 	private function drawFill (object:DisplayObject) {
@@ -1174,6 +1183,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					var useRotation = (flags & Tilesheet.TILE_ROTATION) != 0;
 					var useTransform = (flags & Tilesheet.TILE_TRANS_2x2) != 0;
 					var useRGB = (flags & Tilesheet.TILE_RGB) != 0;
+					var useColorTransform = (flags & Tilesheet.TILE_TRANS_COLOR) != 0;
 					var useAlpha = (flags & Tilesheet.TILE_ALPHA) != 0;
 					var useRect = (flags & Tilesheet.TILE_RECT) != 0;
 					var useOrigin = (flags & Tilesheet.TILE_ORIGIN) != 0;
@@ -1205,6 +1215,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					var transformIndex = 0;
 					var rgbIndex = 0;
 					var alphaIndex = 0;
+					var colorTransformIndex = 0;
 
 					var stride = 3;
 					if (useRect) {
@@ -1229,6 +1240,10 @@ class ConsoleRenderer extends AbstractRenderer {
 					if (useAlpha) {
 						alphaIndex = stride;
 						stride += 1;
+					}
+					if (useColorTransform) { 
+						colorTransformIndex = stride;
+						stride += 4;
 					}
 
 					var totalCount = tileData.length;
@@ -1296,6 +1311,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var alpha = object.__worldAlpha;
 						var red:UInt8 = 255, green:UInt8 = 255, blue:UInt8 = 255;
+						var redOff:UInt8 = 255, greenOff:UInt8 = 255, blue:UInt8 = 255;
 						var scale = 1.0;
 						var rotation = 0.0;
 						var a = 0.0, b = 0.0, c = 0.0, d = 0.0, tx = 0.0, ty = 0.0;
@@ -1308,6 +1324,12 @@ class ConsoleRenderer extends AbstractRenderer {
 							red   = convertInt (tileData[index + rgbIndex + 0] * alpha * 255.0);
 							green = convertInt (tileData[index + rgbIndex + 1] * alpha * 255.0);
 							blue  = convertInt (tileData[index + rgbIndex + 2] * alpha * 255.0);
+						}
+						
+						if (useColorTransform) {
+							redOff   = clamp255(convertInt(tileData[index + colorTransformIndex + 0]));
+							greenOff = clamp255(convertInt(tileData[index + colorTransformIndex + 1]));
+							blueOff  = clamp255(convertInt(tileData[index + colorTransformIndex + 2]));
 						}
 
 						if (useScale) {
@@ -1558,10 +1580,10 @@ class ConsoleRenderer extends AbstractRenderer {
 		colorMultiplier[1] = ct.greenMultiplier;
 		colorMultiplier[2] = ct.blueMultiplier;
 		colorMultiplier[3] = ct.alphaMultiplier;
-		colorOffset[0] = ct.redOffset / 255.0;
-		colorOffset[1] = ct.greenOffset / 255.0;
-		colorOffset[2] = ct.blueOffset / 255.0;
-		colorOffset[3] = ct.alphaOffset / 255.0;
+		colorOffset[0] = ct.redOffset;
+		colorOffset[1] = ct.greenOffset;
+		colorOffset[2] = ct.blueOffset;
+		colorOffset[3] = ct.alphaOffset;
 
 	}
 
