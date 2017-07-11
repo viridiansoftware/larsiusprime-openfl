@@ -1557,10 +1557,10 @@ class ConsoleRenderer extends AbstractRenderer {
 		colorMultiplier[1] = ct.greenMultiplier;
 		colorMultiplier[2] = ct.blueMultiplier;
 		colorMultiplier[3] = ct.alphaMultiplier;
-		colorOffset[0] = ct.redOffset;
-		colorOffset[1] = ct.greenOffset;
-		colorOffset[2] = ct.blueOffset;
-		colorOffset[3] = ct.alphaOffset;
+		colorOffset[0] = ct.redOffset / 255.0;
+		colorOffset[1] = ct.greenOffset / 255.0;
+		colorOffset[2] = ct.blueOffset / 255.0;
+		colorOffset[3] = ct.alphaOffset / 255.0;
 
 	}
 
