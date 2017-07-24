@@ -376,6 +376,7 @@ class ConsoleLineTesselator {
 			(x*bitmapMatrix.b + y*bitmapMatrix.d + bitmapMatrix.ty)
 		);
 		vertices.color (0xff, 0xff, 0xff, 0xff);
+		vertices.color (0, 0, 0, 0);
 		
 	}
 

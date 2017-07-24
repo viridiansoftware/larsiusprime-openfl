@@ -19,6 +19,7 @@ struct PS_IN {
 
 	PS_IN_POSITION
 	float4 Color : COLOR;
+	float4 Color2 : COLOR1;
 	float2 Texcoord : TEXCOORD;
 
 };
@@ -40,7 +41,7 @@ float4 main (PS_IN In) : PS_TARGET_OUT {
 		TEX2D (g_texture, g_sampler, In.Texcoord),
 		In.Color,
 		g_colorMultiplier,
-		g_colorOffset
+		In.Color2 + g_colorOffset
 	);
 #else
 	Out.Color = TEX2D (g_texture, g_sampler, In.Texcoord) * In.Color;
