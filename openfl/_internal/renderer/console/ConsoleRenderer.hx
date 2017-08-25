@@ -168,8 +168,6 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	#if vita
 		var scissor = (clipRect != null);
-		if (color) Sys.println("default_color1");
-		if (!color) Sys.println("default_color0");
 		return if (color == false && scissor == false) shaderDefault_color0_scissor0;
 			else if (color == true && scissor == false) shaderDefault_color1_scissor0;
 			else if (color == false && scissor == true) shaderDefault_color0_scissor1;
@@ -187,8 +185,6 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	#if vita
 		var scissor = (clipRect != null);
-		if (color) Sys.println("fill_color1");
-		if (!color) Sys.println("fill_color0");
 		return if (color == false && scissor == false) shaderFill_color0_scissor0;
 			else if (color == true && scissor == false) shaderFill_color1_scissor0;
 			else if (color == false && scissor == true) shaderFill_color0_scissor1;
