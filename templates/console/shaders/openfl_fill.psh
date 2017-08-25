@@ -28,11 +28,15 @@ float4 main( PS_IN In ) : PS_TARGET_OUT {
 	}
 #endif
 
+#ifdef USE_COLOR_TRANSFORM
 	return colorTransform(
 		float4(1.0, 1.0, 1.0, 1.0),
 		In.Color,
 		g_colorMultiplier,
 		g_colorOffset
 	);
+#else
+	return In.Color;
+#endif
 
 }

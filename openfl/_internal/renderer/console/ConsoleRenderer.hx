@@ -67,10 +67,16 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private var ctx:ConsoleRenderContext;
 
-	private var shaderDefault (get,null):Shader;
-	private var shaderFill (get,null):Shader;
-	private var shaderDefault_scissor:Shader;
-	private var shaderFill_scissor:Shader;
+	private var shaderDefault_color0_scissor0:Shader;
+	private var shaderDefault_color1_scissor0:Shader;
+	private var shaderFill_color0_scissor0:Shader;
+	private var shaderFill_color1_scissor0:Shader;
+#if vita
+	private var shaderDefault_color0_scissor1:Shader;
+	private var shaderDefault_color1_scissor1:Shader;
+	private var shaderFill_color0_scissor1:Shader;
+	private var shaderFill_color1_scissor1:Shader;
+#end
 
 	private var textureBitmaps = new Array<WeakRef<BitmapData>> ();
 	private var textures = new Array<Texture> ();
@@ -79,6 +85,7 @@ class ConsoleRenderer extends AbstractRenderer {
 	private var viewProj = new Matrix4();
 	private var transform = new Matrix4();
 
+	private var useColorTransform:Bool = true;
 	private var colorMultiplier:Array<Float32> = [1, 1, 1, 1];
 	private var colorOffset:Array<Float32> = [0, 0, 0, 0];
 
@@ -132,12 +139,15 @@ class ConsoleRenderer extends AbstractRenderer {
 		this.width = width;
 		this.height = height;
 
-		shaderDefault = ctx.lookupShader ("openfl_default");
-		shaderFill = ctx.lookupShader ("openfl_fill");
-
+		shaderDefault_color0_scissor0 = ctx.lookupShader ("openfl_default");
+		shaderFill_color0_scissor0 = ctx.lookupShader ("openfl_fill");
+		shaderDefault_color1_scissor0 = ctx.lookupShader ("openfl_default_color1_scissor0");
+		shaderFill_color1_scissor0 = ctx.lookupShader ("openfl_fill_color1_scissor0");
 	#if vita
-		shaderDefault_scissor = ctx.lookupShader ("openfl_default_scissor");
-		shaderFill_scissor = ctx.lookupShader ("openfl_fill_scissor");
+		shaderDefault_color0_scissor1 = ctx.lookupShader ("openfl_default_color0_scissor1");
+		shaderDefault_color1_scissor1 = ctx.lookupShader ("openfl_default_color1_scissor1");
+		shaderFill_color0_scissor1 = ctx.lookupShader ("openfl_fill_color0_scissor1");
+		shaderFill_color1_scissor1 = ctx.lookupShader ("openfl_fill_color1_scissor1");
 	#end
 		
 		// TODO(james4k): whiteTextureData should just be a local variable, but
@@ -154,26 +164,40 @@ class ConsoleRenderer extends AbstractRenderer {
 	}
 
 
-	private inline function get_shaderDefault ():Shader {
+	private inline function shaderDefault (color:Bool):Shader {
 
 	#if vita
-		if (clipRect != null) {
-			return shaderDefault_scissor;
-		}
+		var scissor = (clipRect != null);
+		if (color) Sys.println("default_color1");
+		if (!color) Sys.println("default_color0");
+		return if (color == false && scissor == false) shaderDefault_color0_scissor0;
+			else if (color == true && scissor == false) shaderDefault_color1_scissor0;
+			else if (color == false && scissor == true) shaderDefault_color0_scissor1;
+			else if (color == true && scissor == true) shaderDefault_color1_scissor1;
+			else shaderDefault_color0_scissor0;
+	#else
+		return if (color) shaderDefault_color1_scissor0;
+			else shaderDefault_color0_scissor0;
 	#end
-		return shaderDefault;
-
+	
 	}
 
 
-	private inline function get_shaderFill ():Shader {
+	private inline function shaderFill (color:Bool):Shader {
 
 	#if vita
-		if (clipRect != null) {
-			return shaderFill_scissor;
-		}
+		var scissor = (clipRect != null);
+		if (color) Sys.println("fill_color1");
+		if (!color) Sys.println("fill_color0");
+		return if (color == false && scissor == false) shaderFill_color0_scissor0;
+			else if (color == true && scissor == false) shaderFill_color1_scissor0;
+			else if (color == false && scissor == true) shaderFill_color0_scissor1;
+			else if (color == true && scissor == true) shaderFill_color1_scissor1;
+			else shaderFill_color0_scissor0;
+	#else
+		return if (color) shaderFill_color1_scissor0;
+			else shaderFill_color0_scissor0;
 	#end
-		return shaderFill;
 
 	}
 
@@ -583,7 +607,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		var texture = bitmapDataTexture (bitmap);
 
-		ctx.bindShader (shaderDefault);
+		ctx.bindShader (shaderDefault(useColorTransform));
 		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 		ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 		ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -733,7 +757,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 		indexBuffer.unlock ();
 
-		ctx.bindShader (shaderFill);
+		ctx.bindShader (shaderFill(useColorTransform));
 		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 		ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 		ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -825,7 +849,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		vertexBuffer.unlock ();
 		indexBuffer.unlock ();
 
-		ctx.bindShader (shaderDefault);
+		ctx.bindShader (shaderDefault(useColorTransform));
 		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 		ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 		ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -1053,7 +1077,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var texture = bitmapDataTexture (fillBitmap);
 
-						ctx.bindShader (shaderDefault);
+						ctx.bindShader (shaderDefault(useColorTransform));
 						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 						ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 						ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -1088,7 +1112,7 @@ class ConsoleRenderer extends AbstractRenderer {
 						out.vec3 (cmd.x + cmd.width, cmd.y + cmd.height, 0);
 						vertexBuffer.unlock ();
 
-						ctx.bindShader (shaderFill);
+						ctx.bindShader (shaderFill(useColorTransform));
 						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 						ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 						ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -1153,7 +1177,7 @@ class ConsoleRenderer extends AbstractRenderer {
 							}
 							indexBuffer.unlock ();
 
-							ctx.bindShader (shaderFill);
+							ctx.bindShader (shaderFill(useColorTransform));
 							ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 							ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 							ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -1407,7 +1431,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					var texture = bitmapDataTexture (sheet.__bitmap);
 
 					setBlendState (blendMode);
-					ctx.bindShader (shaderDefault);
+					ctx.bindShader (shaderDefault(useColorTransform || useRGBOffset));
 					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 					ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 					ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -1470,7 +1494,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 					indexBuffer.unlock ();
 
-					ctx.bindShader (shaderDefault);
+					ctx.bindShader (shaderDefault(useColorTransform));
 					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 					ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 					ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -1563,7 +1587,7 @@ class ConsoleRenderer extends AbstractRenderer {
 			}
 			indexBuffer.unlock ();
 
-			ctx.bindShader (shaderFill);
+			ctx.bindShader (shaderFill(useColorTransform));
 			ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
 			ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
 			ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
@@ -1589,7 +1613,19 @@ class ConsoleRenderer extends AbstractRenderer {
 		colorOffset[2] = ct.blueOffset / 255.0;
 		colorOffset[3] = ct.alphaOffset / 255.0;
 
+		useColorTransform = (
+			Math.abs(ct.redMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.greenMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.blueMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.alphaMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.redOffset) > 0.001 ||
+			Math.abs(ct.greenOffset) > 0.001 ||
+			Math.abs(ct.blueOffset) > 0.001 ||
+			Math.abs(ct.alphaOffset) > 0.001
+		);
+
 	}
+
 
 	private static var workQueue:cpp.vm.Deque<Void->Void> = null;
 	private static var workCount:cpp.AtomicInt = 0;
