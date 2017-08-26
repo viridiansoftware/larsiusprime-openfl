@@ -114,6 +114,7 @@ class ConsoleRenderer extends AbstractRenderer {
 	private var points = new Array<Float32> ();
 
 	private var blendMode:BlendMode = NORMAL;
+	private var blendModeState:BlendMode = null;
 	private var clipRect:Rectangle = null;
 
 	private var tempColor:Array<Float32> = [1, 1, 1, 1];
@@ -240,6 +241,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		ctx.setRasterizerState (CULLNONE_SOLID);
 		ctx.setDepthStencilState (DEPTHTESTOFF_DEPTHWRITEOFF_STENCILOFF);
 
+		blendModeState = null;
 		blendMode = NORMAL;
 		setBlendState (blendMode);
 
@@ -261,6 +263,11 @@ class ConsoleRenderer extends AbstractRenderer {
 				trace ('unsupported blend mode: $b');
 		}
 		#end
+
+		if (blendModeState == b) {
+			return;
+		}
+		blendModeState = b;
 
 		// note: premultiplied alpha
 		ctx.setBlendState (switch (b) {
@@ -303,11 +310,8 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 
 		var prevBlendMode = blendMode;
-		var objBlendMode:BlendMode = (object.blendMode == null) ? NORMAL : object.blendMode;
-		if (objBlendMode != blendMode) {
-			blendMode = objBlendMode;
-			setBlendState(objBlendMode);
-		}
+		blendMode = (object.blendMode == null) ? NORMAL : object.blendMode;
+		setBlendState(blendMode);
 
 		if (Std.is (object, DisplayObjectContainer)) {
 
