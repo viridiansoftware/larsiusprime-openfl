@@ -165,7 +165,7 @@ class ConsoleRenderer extends AbstractRenderer {
 	}
 
 
-	private inline function shaderDefault (color:Bool):Shader {
+	private inline function getShaderDefault (color:Bool):Shader {
 
 	#if vita
 		var scissor = (clipRect != null);
@@ -182,7 +182,7 @@ class ConsoleRenderer extends AbstractRenderer {
 	}
 
 
-	private inline function shaderFill (color:Bool):Shader {
+	private inline function getShaderFill (color:Bool):Shader {
 
 	#if vita
 		var scissor = (clipRect != null);
@@ -195,6 +195,38 @@ class ConsoleRenderer extends AbstractRenderer {
 		return if (color) shaderFill_color1_scissor0;
 			else shaderFill_color0_scissor0;
 	#end
+
+	}
+
+
+	private function bindShaderDefault(
+		useColorTransform:Bool,
+		colorMul:Array<Float32>,
+		colorAdd:Array<Float32>
+	):Void {
+
+		var shader = getShaderDefault (useColorTransform);
+		ctx.bindShader (shader);
+		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (this.scissorRect, 0), 1);
+		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (this.transform), 4);
+		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (colorMul, 0), 1);
+		ctx.setVertexShaderConstantF (5, cpp.Pointer.arrayElem (colorAdd, 0), 1);
+
+	}
+
+
+	private function bindShaderFill(
+		useColorTransform:Bool,
+		colorMul:Array<Float32>,
+		colorAdd:Array<Float32>
+	):Void {
+
+		var shader = getShaderFill (useColorTransform);
+		ctx.bindShader (shader);
+		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (this.scissorRect, 0), 1);
+		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (this.transform), 4);
+		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (colorMul, 0), 1);
+		ctx.setVertexShaderConstantF (5, cpp.Pointer.arrayElem (colorAdd, 0), 1);
 
 	}
 
@@ -577,11 +609,11 @@ class ConsoleRenderer extends AbstractRenderer {
 		var w = bitmap.width;
 		var h = bitmap.height;
 		var worldAlpha = object.__worldAlpha;
-		var color:Array<Float32> = tempColor;
-		color[0] = 1.0 * worldAlpha;
-		color[1] = 1.0 * worldAlpha;
-		color[2] = 1.0 * worldAlpha;
-		color[3] = worldAlpha;
+		var colorMul:Array<Float32> = tempColor;
+		colorMul[0] = colorMultiplier[0] * 1.0 * worldAlpha;
+		colorMul[1] = colorMultiplier[1] * 1.0 * worldAlpha;
+		colorMul[2] = colorMultiplier[2] * 1.0 * worldAlpha;
+		colorMul[3] = colorMultiplier[3] * worldAlpha;
 
 		setColorTransform(object.__worldColorTransform);
 
@@ -607,12 +639,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		var texture = bitmapDataTexture (bitmap);
 
-		ctx.bindShader (shaderDefault(useColorTransform));
-		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-		ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-		ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (color, 0), 1);
+		bindShaderDefault (useColorTransform, colorMul, colorOffset);
 		ctx.setVertexSource (vertexBuffer);
 		ctx.setTextureAddressMode (0, Clamp, Clamp);
 		if (smoothing) {
@@ -757,14 +784,14 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 		indexBuffer.unlock ();
 
-		ctx.bindShader (shaderFill(useColorTransform));
-		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-		ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-		ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+		var colorMul:Array<cpp.Float32> = tempColor;
+		colorMul[0] = colorMultiplier[0] * fillColor[0];
+		colorMul[1] = colorMultiplier[1] * fillColor[1];
+		colorMul[2] = colorMultiplier[2] * fillColor[2];
+		colorMul[3] = colorMultiplier[3] * fillColor[3];
+
+		bindShaderFill (useColorTransform, colorMul, colorOffset);
 		ctx.setVertexSource (vertexBuffer);
-		//ctx.draw (Primitive.Triangle, 0, vertexCount - 2);
 		ctx.setIndexSource (indexBuffer);
 		ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (indexCount, 3));
 
@@ -849,12 +876,13 @@ class ConsoleRenderer extends AbstractRenderer {
 		vertexBuffer.unlock ();
 		indexBuffer.unlock ();
 
-		ctx.bindShader (shaderDefault(useColorTransform));
-		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-		ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-		ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (lineColor, 0), 1);
+		var colorMul:Array<cpp.Float32> = tempColor;
+		colorMul[0] = colorMultiplier[0] * lineColor[0];
+		colorMul[1] = colorMultiplier[1] * lineColor[1];
+		colorMul[2] = colorMultiplier[2] * lineColor[2];
+		colorMul[3] = colorMultiplier[3] * lineColor[3];
+
+		bindShaderDefault (useColorTransform, colorMul, colorOffset);
 		ctx.setVertexSource (vertexBuffer);
 		ctx.setIndexSource (indexBuffer);
 		if (lineBitmapRepeat) {
@@ -914,8 +942,6 @@ class ConsoleRenderer extends AbstractRenderer {
 
 				//case BeginFill (rgb, alpha):
 				case BEGIN_FILL:
-
-					// TODO(james4k): color transform. no sense doing that in shader for fill, right?
 
 					var cmd = r.readBeginFill ();
 
@@ -1049,11 +1075,11 @@ class ConsoleRenderer extends AbstractRenderer {
 						var w = cmd.width;
 						var h = cmd.height;
 						var alpha = object.__worldAlpha;
-						var color:Array<cpp.Float32> = tempColor;
-						color[0] = 1.0 * alpha;
-						color[1] = 1.0 * alpha;
-						color[2] = 1.0 * alpha;
-						color[3] = alpha;
+						var colorMul:Array<cpp.Float32> = tempColor;
+						colorMul[0] = colorMultiplier[0] * 1.0 * alpha;
+						colorMul[1] = colorMultiplier[1] * 1.0 * alpha;
+						colorMul[2] = colorMultiplier[2] * 1.0 * alpha;
+						colorMul[3] = colorMultiplier[3] * alpha;
 
 						var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, 4);
 						var out = vertexBuffer.lock ();
@@ -1077,12 +1103,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var texture = bitmapDataTexture (fillBitmap);
 
-						ctx.bindShader (shaderDefault(useColorTransform));
-						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-						ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-						ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-						ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-						ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (color, 0), 1);
+						bindShaderDefault (useColorTransform, colorMul, colorOffset);
 						ctx.setVertexSource (vertexBuffer);
 						ctx.setTextureAddressMode (0, Clamp, Clamp);
 						if (fillBitmapRepeat) {
@@ -1104,6 +1125,12 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						setObjectTransform (object);
 
+						var colorMul:Array<cpp.Float32> = tempColor;
+						colorMul[0] = colorMultiplier[0] * fillColor[0];
+						colorMul[1] = colorMultiplier[1] * fillColor[1];
+						colorMul[2] = colorMultiplier[2] * fillColor[2];
+						colorMul[3] = colorMultiplier[3] * fillColor[3];
+
 						var vertexBuffer = transientVertexBuffer (VertexDecl.Position, 4);	
 						var out = vertexBuffer.lock ();
 						out.vec3 (cmd.x, cmd.y, 0);
@@ -1112,12 +1139,7 @@ class ConsoleRenderer extends AbstractRenderer {
 						out.vec3 (cmd.x + cmd.width, cmd.y + cmd.height, 0);
 						vertexBuffer.unlock ();
 
-						ctx.bindShader (shaderFill(useColorTransform));
-						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-						ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-						ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-						ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-						ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+						bindShaderFill (useColorTransform, colorMul, colorOffset);
 						ctx.setVertexSource (vertexBuffer);
 						ctx.draw (Primitive.TriangleStrip, 0, 2);
 
@@ -1177,12 +1199,13 @@ class ConsoleRenderer extends AbstractRenderer {
 							}
 							indexBuffer.unlock ();
 
-							ctx.bindShader (shaderFill(useColorTransform));
-							ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-							ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-							ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-							ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-							ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+							var colorMul:Array<cpp.Float32> = tempColor;
+							colorMul[0] = colorMultiplier[0] * fillColor[0];
+							colorMul[1] = colorMultiplier[1] * fillColor[1];
+							colorMul[2] = colorMultiplier[2] * fillColor[2];
+							colorMul[3] = colorMultiplier[3] * fillColor[3];
+							
+							bindShaderFill (useColorTransform, colorMul, colorOffset);
 							ctx.setVertexSource (vertexBuffer);
 							ctx.setIndexSource (indexBuffer);
 							ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (triangles.length, 3));
@@ -1430,13 +1453,14 @@ class ConsoleRenderer extends AbstractRenderer {
 
 					var texture = bitmapDataTexture (sheet.__bitmap);
 
+					var colorMul:Array<cpp.Float32> = tempColor;
+					colorMul[0] = colorMultiplier[0] * fillColor[0];
+					colorMul[1] = colorMultiplier[1] * fillColor[1];
+					colorMul[2] = colorMultiplier[2] * fillColor[2];
+					colorMul[3] = colorMultiplier[3] * fillColor[3];
+
 					setBlendState (blendMode);
-					ctx.bindShader (shaderDefault(useColorTransform || useRGBOffset));
-					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-					ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-					ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-					ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-					ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+					bindShaderDefault (useColorTransform || useRGBOffset, colorMul, colorOffset);
 					ctx.setVertexSource (vertexBuffer);
 					ctx.setIndexSource (indexBuffer);
 					ctx.setTextureAddressMode (0, Clamp, Clamp);
@@ -1494,12 +1518,13 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 					indexBuffer.unlock ();
 
-					ctx.bindShader (shaderDefault(useColorTransform));
-					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-					ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-					ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-					ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-					ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+					var colorMul:Array<cpp.Float32> = tempColor;
+					colorMul[0] = colorMultiplier[0] * fillColor[0];
+					colorMul[1] = colorMultiplier[1] * fillColor[1];
+					colorMul[2] = colorMultiplier[2] * fillColor[2];
+					colorMul[3] = colorMultiplier[3] * fillColor[3];
+
+					bindShaderDefault (useColorTransform, colorMul, colorOffset);
 					ctx.setVertexSource (vertexBuffer);
 					ctx.setIndexSource (indexBuffer);
 					ctx.setTextureAddressMode (0, Wrap, Wrap);
@@ -1587,14 +1612,14 @@ class ConsoleRenderer extends AbstractRenderer {
 			}
 			indexBuffer.unlock ();
 
-			ctx.bindShader (shaderFill(useColorTransform));
-			ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-			ctx.setPixelShaderConstantF (1, cpp.Pointer.arrayElem (colorMultiplier, 0), 1);
-			ctx.setPixelShaderConstantF (2, cpp.Pointer.arrayElem (colorOffset, 0), 1);
-			ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-			ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+			var colorMul:Array<cpp.Float32> = tempColor;
+			colorMul[0] = colorMultiplier[0] * fillColor[0];
+			colorMul[1] = colorMultiplier[1] * fillColor[1];
+			colorMul[2] = colorMultiplier[2] * fillColor[2];
+			colorMul[3] = colorMultiplier[3] * fillColor[3];
+
+			bindShaderFill (useColorTransform, colorMul, colorOffset);
 			ctx.setVertexSource (vertexBuffer);
-			//ctx.draw (Primitive.Triangle, 0, vertexCount - 2);
 			ctx.setIndexSource (indexBuffer);
 			ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (indexCount, 3));
 
@@ -1604,9 +1629,9 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private function setColorTransform(ct:ColorTransform):Void {
 
-		colorMultiplier[0] = ct.redMultiplier;
-		colorMultiplier[1] = ct.greenMultiplier;
-		colorMultiplier[2] = ct.blueMultiplier;
+		colorMultiplier[0] = ct.redMultiplier * ct.alphaMultiplier;
+		colorMultiplier[1] = ct.greenMultiplier * ct.alphaMultiplier;
+		colorMultiplier[2] = ct.blueMultiplier * ct.alphaMultiplier;
 		colorMultiplier[3] = ct.alphaMultiplier;
 		colorOffset[0] = ct.redOffset / 255.0;
 		colorOffset[1] = ct.greenOffset / 255.0;

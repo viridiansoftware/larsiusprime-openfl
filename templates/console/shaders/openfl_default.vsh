@@ -2,15 +2,16 @@
 
 
 MATRIX_ORDER float4x4 g_transform : register (c0);
-float4 g_color : register (c4);
+float4 g_colorMultiplier : register (c4);
+float4 g_colorOffset     : register (c5);
 
 
 struct VS_IN {
 
 	float3 Pos : POSITION;
 	float2 Texcoord : TEXCOORD;
-	float4 Color : COLOR;
-	float4 Color2 : COLOR1;
+	float4 ColorMul : COLOR;
+	float4 ColorAdd : COLOR1;
 
 };
 
@@ -18,8 +19,8 @@ struct VS_IN {
 struct VS_OUT {
 
 	float4 ProjPos : VS_OUT_POSITION;
-	float4 Color : COLOR;
-	float4 Color2 : COLOR1;
+	float4 ColorMul : COLOR;
+	float4 ColorAdd : COLOR1;
 	float2 Texcoord : TEXCOORD;
 
 };
@@ -29,8 +30,8 @@ VS_OUT main (VS_IN In) {
 
 	VS_OUT Out;
 	Out.ProjPos = mul( g_transform, float4( In.Pos, 1 ) );
-	Out.Color = In.Color * g_color;
-	Out.Color2 = In.Color2;
+	Out.ColorMul = In.ColorMul * g_colorMultiplier;
+	Out.ColorAdd = In.ColorAdd + g_colorOffset;
 	//Out.color.rgb = gammaToLinear(Out.Color.rgb);
 	Out.Texcoord = In.Texcoord;
 	return Out;
