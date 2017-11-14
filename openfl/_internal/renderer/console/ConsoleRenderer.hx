@@ -605,17 +605,16 @@ class ConsoleRenderer extends AbstractRenderer {
 		beginClipRect ();
 
 		setObjectTransform (object);
+		setColorTransform(object.__worldColorTransform);
 
 		var w = bitmap.width;
 		var h = bitmap.height;
-		var worldAlpha = object.__worldAlpha;
+		var worldAlpha = alphaHack(object);
 		var colorMul:Array<Float32> = tempColor;
 		colorMul[0] = colorMultiplier[0] * 1.0 * worldAlpha;
 		colorMul[1] = colorMultiplier[1] * 1.0 * worldAlpha;
 		colorMul[2] = colorMultiplier[2] * 1.0 * worldAlpha;
 		colorMul[3] = colorMultiplier[3] * worldAlpha;
-
-		setColorTransform(object.__worldColorTransform);
 
 		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, 4);
 		var out = vertexBuffer.lock ();
@@ -907,13 +906,14 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		hasFill = false;
 		hasStroke = false;
-		var worldAlpha = object.__worldAlpha;
+
+		setColorTransform(object.__worldColorTransform);
+
+		var worldAlpha = alphaHack(object);
 		fillColor[0] = 1.0 * worldAlpha;
 		fillColor[1] = 1.0 * worldAlpha;
 		fillColor[2] = 1.0 * worldAlpha;
 		fillColor[3] = worldAlpha;
-
-		setColorTransform(object.__worldColorTransform);
 
 		// TODO(james4k): warn on unimplemented WindingRules
 
@@ -1074,7 +1074,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var w = cmd.width;
 						var h = cmd.height;
-						var alpha = object.__worldAlpha;
+						var alpha = alphaHack(object);
 						var colorMul:Array<cpp.Float32> = tempColor;
 						colorMul[0] = colorMultiplier[0] * 1.0 * alpha;
 						colorMul[1] = colorMultiplier[1] * 1.0 * alpha;
@@ -1369,6 +1369,10 @@ class ConsoleRenderer extends AbstractRenderer {
 							red   = convertInt (tileData[index + rgbIndex + 0] * alpha * 255.0);
 							green = convertInt (tileData[index + rgbIndex + 1] * alpha * 255.0);
 							blue  = convertInt (tileData[index + rgbIndex + 2] * alpha * 255.0);
+						} else {
+							red   = convertInt (alpha * 255.0);
+							green = convertInt (alpha * 255.0);
+							blue  = convertInt (alpha * 255.0);
 						}
 
 						if (useScale) {
@@ -1714,6 +1718,24 @@ class ConsoleRenderer extends AbstractRenderer {
 			work = null;
 
 		}
+
+	}
+
+
+	// alphaHack gets the world alpha for an object without the color transform alpha
+	// applied if it exists. Doubtful this works with multiple color transforms up
+	// the object hierarchy.
+	// NOTE(james4k): The alpha and color transforms of the object are coupled in a weird
+	// way when rendering with premultiplied alpha, and not sure what to do without
+	// tearing up a bunch of OpenFL. So we do our best to decouple them here.
+	private function alphaHack(object:DisplayObject):Float {
+
+			// note: worldAlpha has color transform alpha applied
+			var alpha = object.__worldAlpha;
+			if (alpha > 0.001 && Math.abs(object.alpha - colorMultiplier[3]) < 0.001) {
+				return alpha / object.alpha;
+			}
+			return alpha;
 
 	}
 
