@@ -38,6 +38,7 @@ import openfl.display.Shape;
 import openfl.display.Sprite;
 import openfl.display.Stage;
 import openfl.display.Tilesheet;
+import openfl.geom.ColorTransform;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
@@ -46,6 +47,8 @@ import openfl.text.TextField;
 import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
 import openfl.text.TextFormatAlign;
+
+using cpp.AtomicInt;
 
 
 @:access(openfl.display.Bitmap)
@@ -64,15 +67,31 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private var ctx:ConsoleRenderContext;
 
-	private var defaultShader:Shader;
-	private var fillShader:Shader;
+	private var shaderDefault_color0_scissor0_palette0:Shader;
+	private var shaderDefault_color1_scissor0_palette0:Shader;
+	private var shaderDefault_color0_scissor0_palette1:Shader;
+	private var shaderDefault_color1_scissor0_palette1:Shader;
+	private var shaderFill_color0_scissor0:Shader;
+	private var shaderFill_color1_scissor0:Shader;
+#if vita
+	private var shaderDefault_color0_scissor1_palette0:Shader;
+	private var shaderDefault_color1_scissor1_palette0:Shader;
+	private var shaderDefault_color0_scissor1_palette1:Shader;
+	private var shaderDefault_color1_scissor1_palette1:Shader;
+	private var shaderFill_color0_scissor1:Shader;
+	private var shaderFill_color1_scissor1:Shader;
+#end
 
 	private var textureBitmaps = new Array<WeakRef<BitmapData>> ();
 	private var textures = new Array<Texture> ();
 
 	private var scissorRect:Array<Float32> = [0, 0, 0, 0];
-	private var viewProj:Matrix4;
-	private var transform:Matrix4;
+	private var viewProj = new Matrix4();
+	private var transform = new Matrix4();
+
+	private var useColorTransform:Bool = true;
+	private var colorMultiplier:Array<Float32> = [1, 1, 1, 1];
+	private var colorOffset:Array<Float32> = [0, 0, 0, 0];
 
 	private var hasFill = false;
 	private var fillBitmap:BitmapData = null;
@@ -99,7 +118,11 @@ class ConsoleRenderer extends AbstractRenderer {
 	private var points = new Array<Float32> ();
 
 	private var blendMode:BlendMode = NORMAL;
+	private var blendModeState:BlendMode = null;
 	private var clipRect:Rectangle = null;
+
+	private var tempColor:Array<Float32> = [1, 1, 1, 1];
+	private var tempRectangle = new Rectangle(0, 0, 0, 0);
 
 	#if !console_pc
 	private static var pixelOffsetX:Float = 0.0;
@@ -110,6 +133,7 @@ class ConsoleRenderer extends AbstractRenderer {
 	private static var pixelOffsetY:Float = 0.5;
 	#end
 
+	private var whiteTextureData:cpp.UInt32 = 0xffffffff;
 	
 	public function new (width:Int, height:Int, ctx:ConsoleRenderContext) {
 
@@ -120,16 +144,105 @@ class ConsoleRenderer extends AbstractRenderer {
 		this.width = width;
 		this.height = height;
 
-		defaultShader = ctx.lookupShader ("openfl_default");
-		fillShader = ctx.lookupShader ("openfl_fill");
-
+		shaderDefault_color0_scissor0_palette0 = ctx.lookupShader ("openfl_default");
+		shaderDefault_color1_scissor0_palette0 = ctx.lookupShader ("openfl_default_color1_scissor0_palette0");
+		shaderDefault_color0_scissor0_palette1 = ctx.lookupShader ("openfl_default_color0_scissor0_palette1");
+		shaderDefault_color1_scissor0_palette1 = ctx.lookupShader ("openfl_default_color1_scissor0_palette1");
+		shaderFill_color0_scissor0 = ctx.lookupShader ("openfl_fill");
+		shaderFill_color1_scissor0 = ctx.lookupShader ("openfl_fill_color1_scissor0");
+	#if vita
+		shaderDefault_color0_scissor1_palette0 = ctx.lookupShader ("openfl_default_color0_scissor1_palette0");
+		shaderDefault_color1_scissor1_palette0 = ctx.lookupShader ("openfl_default_color1_scissor1_palette0");
+		shaderDefault_color0_scissor1_palette1 = ctx.lookupShader ("openfl_default_color0_scissor1_palette1");
+		shaderDefault_color1_scissor1_palette1 = ctx.lookupShader ("openfl_default_color1_scissor1_palette1");
+		shaderFill_color0_scissor1 = ctx.lookupShader ("openfl_fill_color0_scissor1");
+		shaderFill_color1_scissor1 = ctx.lookupShader ("openfl_fill_color1_scissor1");
+	#end
 		
-		var white:cpp.UInt32 = 0xffffffff;
+		// TODO(james4k): whiteTextureData should just be a local variable, but
+		// haxe's optimizer futz this and generates code that tries to take an address
+		// of a literal.
 		whiteTexture = ctx.createTexture (
 			TextureFormat.ARGB,
 			1, 1,
-			cast cpp.Pointer.addressOf (white).reinterpret ()
+			cpp.Pointer.addressOf (whiteTextureData).reinterpret ()
 		);
+
+		initWorkers();
+
+	}
+
+
+	private inline function getShaderDefault (color:Bool, palette:Bool):Shader {
+
+	#if vita
+		var scissor = (clipRect != null);
+		return if (color == false && scissor == false && palette == false) shaderDefault_color0_scissor0_palette0;
+			else if (color == true && scissor == false && palette == false) shaderDefault_color1_scissor0_palette0;
+			else if (color == false && scissor == true && palette == false) shaderDefault_color0_scissor1_palette0;
+			else if (color == true && scissor == true && palette == false) shaderDefault_color1_scissor1_palette0;
+			else if (color == false && scissor == false && palette == true) shaderDefault_color0_scissor0_palette1;
+			else if (color == true && scissor == false && palette == true) shaderDefault_color1_scissor0_palette1;
+			else if (color == false && scissor == true && palette == true) shaderDefault_color0_scissor1_palette1;
+			else if (color == true && scissor == true && palette == true) shaderDefault_color1_scissor1_palette1;
+			else shaderDefault_color0_scissor0;
+	#else
+		return if (color == false && palette == false) shaderDefault_color0_scissor0_palette0;
+			else if (color == true && palette == false) shaderDefault_color1_scissor0_palette0;
+			else if (color == false && palette == true) shaderDefault_color0_scissor0_palette1;
+			else if (color == true && palette == true) shaderDefault_color1_scissor0_palette1;
+			else shaderDefault_color0_scissor0_palette0;
+	#end
+	
+	}
+
+
+	private inline function getShaderFill (color:Bool):Shader {
+
+	#if vita
+		var scissor = (clipRect != null);
+		return if (color == false && scissor == false) shaderFill_color0_scissor0;
+			else if (color == true && scissor == false) shaderFill_color1_scissor0;
+			else if (color == false && scissor == true) shaderFill_color0_scissor1;
+			else if (color == true && scissor == true) shaderFill_color1_scissor1;
+			else shaderFill_color0_scissor0;
+	#else
+		return if (color) shaderFill_color1_scissor0;
+			else shaderFill_color0_scissor0;
+	#end
+
+	}
+
+
+	private function bindShaderDefault(
+		useColorTransform:Bool,
+		usePalette:Bool,
+		colorMul:Array<Float32>,
+		colorAdd:Array<Float32>
+	):Void {
+
+		var shader = getShaderDefault (useColorTransform, usePalette);
+		ctx.bindShader (shader);
+		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (this.scissorRect, 0), 1);
+		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (this.transform), 4);
+		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (colorMul, 0), 1);
+		ctx.setVertexShaderConstantF (5, cpp.Pointer.arrayElem (colorAdd, 0), 1);
+
+	}
+
+
+	private function bindShaderFill(
+		useColorTransform:Bool,
+		colorMul:Array<Float32>,
+		colorAdd:Array<Float32>
+	):Void {
+
+		var shader = getShaderFill (useColorTransform);
+		ctx.bindShader (shader);
+		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (this.scissorRect, 0), 1);
+		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (this.transform), 4);
+		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (colorMul, 0), 1);
+		ctx.setVertexShaderConstantF (5, cpp.Pointer.arrayElem (colorAdd, 0), 1);
 
 	}
 
@@ -147,7 +260,8 @@ class ConsoleRenderer extends AbstractRenderer {
 	
 	public override function render (stage:Stage):Void {
 
-		viewProj = Matrix4.createOrtho (
+		matrixOrtho(
+			viewProj,
 			0 + pixelOffsetX,
 			width + pixelOffsetX,
 			height + pixelOffsetY,
@@ -164,9 +278,9 @@ class ConsoleRenderer extends AbstractRenderer {
 		if (stage.__clearBeforeRender) {
 
 			ctx.clear (
-				Std.int (stage.__colorSplit[0] * 0xff),
-				Std.int (stage.__colorSplit[1] * 0xff),
-				Std.int (stage.__colorSplit[2] * 0xff),
+				convertInt (stage.__colorSplit[0] * 0xff),
+				convertInt (stage.__colorSplit[1] * 0xff),
+				convertInt (stage.__colorSplit[2] * 0xff),
 				0xff
 			);
 
@@ -175,12 +289,15 @@ class ConsoleRenderer extends AbstractRenderer {
 		ctx.setRasterizerState (CULLNONE_SOLID);
 		ctx.setDepthStencilState (DEPTHTESTOFF_DEPTHWRITEOFF_STENCILOFF);
 
+		blendModeState = null;
 		blendMode = NORMAL;
 		setBlendState (blendMode);
 
 		renderDisplayObject (stage);
 
 		collectTextures ();
+
+		finishWork ();
 
 	}
 
@@ -195,11 +312,16 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 		#end
 
-		// TODO(james4k): premultiplied alpha
+		if (blendModeState == b) {
+			return;
+		}
+		blendModeState = b;
+
+		// note: premultiplied alpha
 		ctx.setBlendState (switch (b) {
-			case ADD:       SRCALPHA_ONE_ONE_ZERO_RGB;
+			case ADD:       ONE_ONE_ONE_ZERO_RGB;
 			case MULTIPLY:  DESTCOLOR_INVSRCALPHA_ONE_ZERO_RGB;
-			default:        SRCALPHA_INVSRCALPHA_ONE_ZERO_RGB;
+			default:        ONE_INVSRCALPHA_ONE_ZERO_RGB;
 		});
 
 	}
@@ -214,7 +336,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	}
 
-	@:access(openfl.display.DisplayObject)
+	
 	private function renderDisplayObject (object:DisplayObject) {
 
 		if (!object.__renderable || object.__worldAlpha <= 0) {
@@ -222,48 +344,45 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 
 		var prevClipRect = clipRect;
-		if (object.scrollRect != null) {
+		if (object.__scrollRect != null) {
 			clipRect = new Rectangle (
-				object.scrollRect.x,
-				object.scrollRect.y,
-				object.scrollRect.width,
-				object.scrollRect.height
+				object.__scrollRect.x,
+				object.__scrollRect.y,
+				object.__scrollRect.width,
+				object.__scrollRect.height
 			);
 			clipRect.__transform (clipRect, object.__getWorldTransform ());
 			if (prevClipRect != null) {
-				clipRect = clipRect.intersection(prevClipRect);
+				rectangleIntersection(clipRect, prevClipRect);
 			}
 		}
 
 		var prevBlendMode = blendMode;
-		var objBlendMode:BlendMode = (object.blendMode == null) ? NORMAL : object.blendMode;
-		if (objBlendMode != blendMode) {
-			blendMode = objBlendMode;
-			setBlendState(objBlendMode);
-		}
+		blendMode = (object.blendMode == null) ? NORMAL : object.blendMode;
+		setBlendState(blendMode);
 
-		if (object.__isDisplayObjectContainer) { //if (Std.is (object, DisplayObjectContainer)) {
+		if (Std.is (object, DisplayObjectContainer)) {
 
 			renderDisplayObjectContainer (cast (object));
 
-		} else if (object.__displayObjectType == DisplayObject.BITMAP) { //} else if (Std.is (object, Bitmap)) {
+		} else if (Std.is (object, Bitmap)) {
 
 			var b:Bitmap = cast (object);
 			if (b.bitmapData != null) {
 				drawBitmapData (b, b.bitmapData, b.smoothing);
 			}
 
-		} else if (object.__displayObjectType == DisplayObject.SHAPE) {//} else if (Std.is (object, Shape)) {
+		} else if (Std.is (object, Shape)) {
 
 			renderShape_ (cast (object));
 
-		} else if (object.__displayObjectType == DisplayObject.TEXT_FIELD) {//} else if (Std.is (object, TextField)) {
+		} else if (Std.is (object, TextField)) {
 
 			renderTextField (cast (object));
 
 		}
 
-		if (object.scrollRect != null) {
+		if (object.__scrollRect != null) {
 			clipRect = prevClipRect;	
 		}
 		blendMode = prevBlendMode;
@@ -271,10 +390,9 @@ class ConsoleRenderer extends AbstractRenderer {
 	}
 
 
-	@:access(openfl.display.DisplayObject)
 	private function renderDisplayObjectContainer (object:DisplayObjectContainer) {
 
-		if (object.__displayObjectType == DisplayObject.SPRITE) { //if (Std.is (object, Sprite)) {
+		if (Std.is (object, Sprite)) {
 
 			renderSprite (cast (object));
 		}
@@ -305,15 +423,18 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		object.__getWorldTransform ();
 		var matrix = object.__worldTransform;
-		transform = Matrix4.createABCD (
+		matrixABCD(
+			transform,
 			matrix.a,
 			matrix.b,
 			matrix.c,
 			matrix.d,
 			matrix.tx,
-			matrix.ty,
-			transform
+			matrix.ty
 		);
+		matrixMultiply(transform, transform, viewProj);
+		// TODO(james4k): remove need to transpose
+		matrixTranspose(transform);
 
 	}
 
@@ -368,23 +489,31 @@ class ConsoleRenderer extends AbstractRenderer {
 		if (bitmap == null || bitmap.image == null) {
 			return whiteTexture;
 		}
-		
-		if (bitmap.__consoleTexture.valid) {
+
+		if (bitmap.__texture.valid) {
 
 			var image = bitmap.image;
-			var t = bitmap.__consoleTexture;
+			var t = bitmap.__texture;
 
 			if (image.dirty && image.buffer.data != null) {
 
+				#if vita
+				queueWork(function():Void {
+					t.updateFromRGBA (
+						cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+					);
+				});
+				#else
 				t.updateFromRGBA (
 					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
 				);
+				#end
 
 				image.dirty = false;
 
 			}
 
-			return bitmap.__consoleTexture;
+			return bitmap.__texture;
 
 		}
 
@@ -398,15 +527,23 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		if (image.buffer.data != null) {
 
+			#if vita
+			queueWork(function():Void {
+				texture.updateFromRGBA (
+					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+				);
+			});
+			#else
 			texture.updateFromRGBA (
 				cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
 			);
+			#end
 
 		}
 
 		image.dirty = false;
 
-		bitmap.__consoleTexture = texture;
+		bitmap.__texture = texture;
 		textureBitmaps.push (new WeakRef (bitmap));
 		textures.push (texture);
 
@@ -421,10 +558,15 @@ class ConsoleRenderer extends AbstractRenderer {
 			return;
 		}
 
-		var viewport = new Rectangle (0, 0, this.width, this.height);
-		viewport = viewport.intersection (clipRect);
+		var viewport = tempRectangle;
+		viewport.x = 0;
+		viewport.y = 0;
+		viewport.width = this.width;
+		viewport.height = this.height;
+		rectangleIntersection(viewport, clipRect);
 
-		viewProj = Matrix4.createOrtho (
+		matrixOrtho(
+			viewProj,
 			Math.floor (viewport.x) + pixelOffsetX,
 			Math.floor (viewport.x) + Math.ceil (viewport.width) + pixelOffsetX,
 			Math.floor (viewport.y) + Math.ceil (viewport.height) + pixelOffsetY,
@@ -452,7 +594,8 @@ class ConsoleRenderer extends AbstractRenderer {
 			return;
 		}
 
-		viewProj = Matrix4.createOrtho (
+		matrixOrtho(
+			viewProj,
 			0 + pixelOffsetX,
 			this.width + pixelOffsetX,
 			this.height + pixelOffsetY,
@@ -478,43 +621,48 @@ class ConsoleRenderer extends AbstractRenderer {
 		beginClipRect ();
 
 		setObjectTransform (object);
-		transform.append (viewProj);
-		transform.transpose ();
+		setColorTransform(object.__worldColorTransform);
 
 		var w = bitmap.width;
 		var h = bitmap.height;
-		var color:Array<cpp.Float32> = [1, 1, 1, object.__worldAlpha];
+		var worldAlpha = alphaHack(object);
+		var colorMul:Array<Float32> = tempColor;
+		colorMul[0] = colorMultiplier[0] * 1.0 * worldAlpha;
+		colorMul[1] = colorMultiplier[1] * 1.0 * worldAlpha;
+		colorMul[2] = colorMultiplier[2] * 1.0 * worldAlpha;
+		colorMul[3] = colorMultiplier[3] * worldAlpha;
 
-		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, 4);
+		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, 4);
 		var out = vertexBuffer.lock ();
 		out.vec3 (0, 0, 0);
 		out.vec2 (0, 0);
 		out.color(0xff, 0xff, 0xff, 0xff);
+		out.color(0, 0, 0, 0);
 		out.vec3 (0, h, 0);
 		out.vec2 (0, 1);
 		out.color(0xff, 0xff, 0xff, 0xff);
+		out.color(0, 0, 0, 0);
 		out.vec3 (w, 0, 0);
 		out.vec2 (1, 0);
 		out.color(0xff, 0xff, 0xff, 0xff);
+		out.color(0, 0, 0, 0);
 		out.vec3 (w, h, 0);
 		out.vec2 (1, 1);
 		out.color(0xff, 0xff, 0xff, 0xff);
+		out.color(0, 0, 0, 0);
 		vertexBuffer.unlock ();
 
 		var texture = bitmapDataTexture (bitmap);
 
-		ctx.bindShader (defaultShader);
-		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (color, 0), 1);
+		bindShaderDefault (useColorTransform, false, colorMul, colorOffset);
 		ctx.setVertexSource (vertexBuffer);
-		ctx.setTexture (0, texture);
 		ctx.setTextureAddressMode (0, Clamp, Clamp);
 		if (smoothing) {
 			ctx.setTextureFilter (0, TextureFilter.Linear, TextureFilter.Linear);
 		} else {
 			ctx.setTextureFilter (0, TextureFilter.Nearest, TextureFilter.Nearest);
 		}
+		ctx.setTexture (0, texture);
 		ctx.draw (Primitive.TriangleStrip, 0, 2);
 
 		endClipRect ();
@@ -604,13 +752,19 @@ class ConsoleRenderer extends AbstractRenderer {
 	// div divides an integer by an integer using integer math.
 	// Normally in haxe, Int divided by Int returns Float. Can't seem to be
 	// avoided even with cast() or Std.int()
-	private inline function div (a:Int, b:Int):Int {
+	private inline static function div (a:Int, b:Int):Int {
 
 		return untyped __cpp__ ("{0} / {1}", a, b);
 
 	}
 
 
+	// Std.int is a bit indirect. Prevents possible optimizations.
+	private inline static function convertInt (f:Float):Int {
+
+		return untyped __cpp__ ("(int){0}", f);
+
+	}
 
 
 	private function drawFill (object:DisplayObject) {
@@ -624,8 +778,6 @@ class ConsoleRenderer extends AbstractRenderer {
 		//PolyK.triangulate (triangles, points);
 
 		setObjectTransform (object);
-		transform.append (viewProj);
-		transform.transpose ();
 
 		var vertexCount = div (points.length, 2);
 		var indexCount = (vertexCount - 2) * 3;
@@ -647,12 +799,14 @@ class ConsoleRenderer extends AbstractRenderer {
 		}
 		indexBuffer.unlock ();
 
-		ctx.bindShader (fillShader);
-		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+		var colorMul:Array<cpp.Float32> = tempColor;
+		colorMul[0] = colorMultiplier[0] * fillColor[0];
+		colorMul[1] = colorMultiplier[1] * fillColor[1];
+		colorMul[2] = colorMultiplier[2] * fillColor[2];
+		colorMul[3] = colorMultiplier[3] * fillColor[3];
+
+		bindShaderFill (useColorTransform, colorMul, colorOffset);
 		ctx.setVertexSource (vertexBuffer);
-		//ctx.draw (Primitive.Triangle, 0, vertexCount - 2);
 		ctx.setIndexSource (indexBuffer);
 		ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (indexCount, 3));
 
@@ -662,7 +816,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	private function drawStroke (object:DisplayObject) {
 
-		var numPoints = Std.int (points.length / 2);
+		var numPoints = convertInt (points.length / 2);
 		if (!hasStroke || numPoints < 2) {
 			return;
 		}
@@ -680,8 +834,6 @@ class ConsoleRenderer extends AbstractRenderer {
 		// TODO(james4k): square/butt caps
 
 		setObjectTransform (object);
-		transform.append (viewProj);
-		transform.transpose ();
 
 		// TODO(james4k): closed paths should form a joint, and have no caps
 		var numSegments = numPoints - 1;
@@ -697,7 +849,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		indexCount += numCaps * 3; // 1 triangle per cap
 		indexCount += numJoints * 12; // 4 triangles per joint
 
-		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, vertexCount);	
+		var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, vertexCount);	
 		var indexBuffer = transientIndexBuffer (indexCount);
 		var texture = bitmapDataTexture (lineBitmap);
 		var bitmapMatrix:Matrix = new Matrix ();
@@ -739,13 +891,15 @@ class ConsoleRenderer extends AbstractRenderer {
 		vertexBuffer.unlock ();
 		indexBuffer.unlock ();
 
-		ctx.bindShader (defaultShader);
-		ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-		ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-		ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (lineColor, 0), 1);
+		var colorMul:Array<cpp.Float32> = tempColor;
+		colorMul[0] = colorMultiplier[0] * lineColor[0];
+		colorMul[1] = colorMultiplier[1] * lineColor[1];
+		colorMul[2] = colorMultiplier[2] * lineColor[2];
+		colorMul[3] = colorMultiplier[3] * lineColor[3];
+
+		bindShaderDefault (useColorTransform, false, colorMul, colorOffset);
 		ctx.setVertexSource (vertexBuffer);
 		ctx.setIndexSource (indexBuffer);
-		ctx.setTexture (0, texture);
 		if (lineBitmapRepeat) {
 			ctx.setTextureAddressMode (0, Wrap, Wrap);
 		} else {
@@ -756,6 +910,7 @@ class ConsoleRenderer extends AbstractRenderer {
 		} else {
 			ctx.setTextureFilter (0, TextureFilter.Nearest, TextureFilter.Nearest);
 		}
+		ctx.setTexture (0, texture);
 		ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (indexCount, 3));
 
 	}
@@ -767,10 +922,14 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		hasFill = false;
 		hasStroke = false;
-		fillColor[0] = 1.0;
-		fillColor[1] = 1.0;
-		fillColor[2] = 1.0;
-		fillColor[3] = object.__worldAlpha;
+
+		setColorTransform(object.__worldColorTransform);
+
+		var worldAlpha = alphaHack(object);
+		fillColor[0] = 1.0 * worldAlpha;
+		fillColor[1] = 1.0 * worldAlpha;
+		fillColor[2] = 1.0 * worldAlpha;
+		fillColor[3] = worldAlpha;
 
 		// TODO(james4k): warn on unimplemented WindingRules
 
@@ -792,24 +951,22 @@ class ConsoleRenderer extends AbstractRenderer {
 					fillBitmapMatrix = cmd.matrix;
 					fillBitmapRepeat = cmd.repeat;
 					fillBitmapSmooth = cmd.smooth;
-					fillColor[0] = 1.0;
-					fillColor[1] = 1.0;
-					fillColor[2] = 1.0;
-					fillColor[3] = object.__worldAlpha;
+					fillColor[0] = 1.0 * worldAlpha;
+					fillColor[1] = 1.0 * worldAlpha;
+					fillColor[2] = 1.0 * worldAlpha;
+					fillColor[3] = worldAlpha;
 
 				//case BeginFill (rgb, alpha):
 				case BEGIN_FILL:
-
-					// TODO(james4k): color transform. no sense doing that in shader for fill, right?
 
 					var cmd = r.readBeginFill ();
 
 					hasFill = true;
 					fillBitmap = null;
-					fillColor[0] = ((cmd.color >> 16) & 0xFF) / 255.0;
-					fillColor[1] = ((cmd.color >> 8) & 0xFF) / 255.0;
-					fillColor[2] = ((cmd.color >> 0) & 0xFF) / 255.0;
-					fillColor[3] = cmd.alpha * object.__worldAlpha;
+					fillColor[0] = ((cmd.color >> 16) & 0xFF) * worldAlpha / 255.0;
+					fillColor[1] = ((cmd.color >> 8) & 0xFF) * worldAlpha / 255.0;
+					fillColor[2] = ((cmd.color >> 0) & 0xFF) * worldAlpha / 255.0;
+					fillColor[3] = cmd.alpha * worldAlpha;
 
 				// LineStyle (thickness:Null<Float>, color:Null<Int>, alpha:Null<Float>, pixelHinting:Null<Bool>,
 				//            scaleMode:LineScaleMode, caps:CapsStyle, joints:JointStyle, miterLimit:Null<Float>);
@@ -829,10 +986,10 @@ class ConsoleRenderer extends AbstractRenderer {
 
 					lineThickness = cmd.thickness;
 					lineBitmap = null;
-					lineColor[0] = ((cmd.color >> 16) & 0xFF) / 255.0;
-					lineColor[1] = ((cmd.color >> 8) & 0xFF) / 255.0;
-					lineColor[2] = ((cmd.color >> 0) & 0xFF) / 255.0;
-					lineColor[3] = cmd.alpha * object.__worldAlpha;
+					lineColor[0] = ((cmd.color >> 16) & 0xFF) * worldAlpha / 255.0;
+					lineColor[1] = ((cmd.color >> 8) & 0xFF) * worldAlpha / 255.0;
+					lineColor[2] = ((cmd.color >> 0) & 0xFF) * worldAlpha / 255.0;
+					lineColor[3] = cmd.alpha * worldAlpha;
 					lineAlpha = cmd.alpha;
 					lineScaleMode = cmd.scaleMode;
 					lineCaps = cmd.caps != null ? cmd.caps : ROUND;
@@ -884,10 +1041,10 @@ class ConsoleRenderer extends AbstractRenderer {
 					hasFill = false;
 					hasStroke = false;
 					fillBitmap = null;
-					fillColor[0] = 1.0;
-					fillColor[1] = 1.0;
-					fillColor[2] = 1.0;
-					fillColor[3] = object.__worldAlpha;
+					fillColor[0] = 1.0 * worldAlpha;
+					fillColor[1] = 1.0 * worldAlpha;
+					fillColor[2] = 1.0 * worldAlpha;
+					fillColor[3] = worldAlpha;
 
 				//case DrawCircle (x, y, radius):
 				case DRAW_CIRCLE:
@@ -921,8 +1078,6 @@ class ConsoleRenderer extends AbstractRenderer {
 					if (fillBitmap != null) {
 
 						setObjectTransform (object);
-						transform.append (viewProj);
-						transform.transpose ();
 
 						var m:Matrix = new Matrix ();
 						if (fillBitmap != null) {
@@ -935,32 +1090,37 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var w = cmd.width;
 						var h = cmd.height;
-						var color:Array<cpp.Float32> = [1, 1, 1, object.__worldAlpha];
+						var alpha = alphaHack(object);
+						var colorMul:Array<cpp.Float32> = tempColor;
+						colorMul[0] = colorMultiplier[0] * 1.0 * alpha;
+						colorMul[1] = colorMultiplier[1] * 1.0 * alpha;
+						colorMul[2] = colorMultiplier[2] * 1.0 * alpha;
+						colorMul[3] = colorMultiplier[3] * alpha;
 
-						var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, 4);
+						var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, 4);
 						var out = vertexBuffer.lock ();
 						out.vec3 (cmd.x, cmd.y, 0);
 						out.vec2 ((cmd.x)*m.a + (cmd.y)*m.c + m.tx, (cmd.x)*m.b + (cmd.y)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
+						out.color(0, 0, 0, 0);
 						out.vec3 (cmd.x, cmd.y + h, 0);
 						out.vec2 ((cmd.x)*m.a + (cmd.y+h)*m.c + m.tx, (cmd.x)*m.b + (cmd.y+h)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
+						out.color(0, 0, 0, 0);
 						out.vec3 (cmd.x + w, cmd.y, 0);
 						out.vec2 ((cmd.x+w)*m.a + (cmd.y)*m.c + m.tx, (cmd.x+w)*m.b + (cmd.y)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
+						out.color(0, 0, 0, 0);
 						out.vec3 (cmd.x + w, cmd.y + h, 0);
 						out.vec2 ((cmd.x+w)*m.a + (cmd.y+h)*m.c + m.tx, (cmd.x+w)*m.b + (cmd.y+h)*m.d + m.ty);
 						out.color(0xff, 0xff, 0xff, 0xff);
+						out.color(0, 0, 0, 0);
 						vertexBuffer.unlock ();
 
 						var texture = bitmapDataTexture (fillBitmap);
 
-						ctx.bindShader (defaultShader);
-						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-						ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-						ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (color, 0), 1);
+						bindShaderDefault (useColorTransform, false, colorMul, colorOffset);
 						ctx.setVertexSource (vertexBuffer);
-						ctx.setTexture (0, texture);
 						ctx.setTextureAddressMode (0, Clamp, Clamp);
 						if (fillBitmapRepeat) {
 							ctx.setTextureAddressMode (0, Wrap, Wrap);
@@ -972,6 +1132,7 @@ class ConsoleRenderer extends AbstractRenderer {
 						} else {
 							ctx.setTextureFilter (0, TextureFilter.Nearest, TextureFilter.Nearest);
 						}
+						ctx.setTexture (0, texture);
 						ctx.draw (Primitive.TriangleStrip, 0, 2);
 
 					} else {
@@ -979,8 +1140,12 @@ class ConsoleRenderer extends AbstractRenderer {
 						// TODO(james4k): replace moveTo/lineTo calls
 
 						setObjectTransform (object);
-						transform.append (viewProj);
-						transform.transpose ();
+
+						var colorMul:Array<cpp.Float32> = tempColor;
+						colorMul[0] = colorMultiplier[0] * fillColor[0];
+						colorMul[1] = colorMultiplier[1] * fillColor[1];
+						colorMul[2] = colorMultiplier[2] * fillColor[2];
+						colorMul[3] = colorMultiplier[3] * fillColor[3];
 
 						var vertexBuffer = transientVertexBuffer (VertexDecl.Position, 4);	
 						var out = vertexBuffer.lock ();
@@ -990,10 +1155,7 @@ class ConsoleRenderer extends AbstractRenderer {
 						out.vec3 (cmd.x + cmd.width, cmd.y + cmd.height, 0);
 						vertexBuffer.unlock ();
 
-						ctx.bindShader (fillShader);
-						ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-						ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-						ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+						bindShaderFill (useColorTransform, colorMul, colorOffset);
 						ctx.setVertexSource (vertexBuffer);
 						ctx.draw (Primitive.TriangleStrip, 0, 2);
 
@@ -1034,8 +1196,6 @@ class ConsoleRenderer extends AbstractRenderer {
 						if (triangles.length > 0) {
 
 							setObjectTransform (object);
-							transform.append (viewProj);
-							transform.transpose ();
 
 							var vertexCount = div (points.length, 2);
 							var indexCount = triangles.length;
@@ -1055,10 +1215,13 @@ class ConsoleRenderer extends AbstractRenderer {
 							}
 							indexBuffer.unlock ();
 
-							ctx.bindShader (fillShader);
-							ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-							ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-							ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+							var colorMul:Array<cpp.Float32> = tempColor;
+							colorMul[0] = colorMultiplier[0] * fillColor[0];
+							colorMul[1] = colorMultiplier[1] * fillColor[1];
+							colorMul[2] = colorMultiplier[2] * fillColor[2];
+							colorMul[3] = colorMultiplier[3] * fillColor[3];
+							
+							bindShaderFill (useColorTransform, colorMul, colorOffset);
 							ctx.setVertexSource (vertexBuffer);
 							ctx.setIndexSource (indexBuffer);
 							ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (triangles.length, 3));
@@ -1071,25 +1234,31 @@ class ConsoleRenderer extends AbstractRenderer {
 				case DRAW_TILES:
 
 					var cmd = r.readDrawTiles ();
+					var sheet = cmd.sheet;
+					var tileData = cmd.tileData;
+					var smooth = cmd.smooth;
+					var flags = cmd.flags;
+					var count = cmd.count;
 
-					var useScale = (cmd.flags & Tilesheet.TILE_SCALE) != 0;
-					var useRotation = (cmd.flags & Tilesheet.TILE_ROTATION) != 0;
-					var useTransform = (cmd.flags & Tilesheet.TILE_TRANS_2x2) != 0;
-					var useRGB = (cmd.flags & Tilesheet.TILE_RGB) != 0;
-					var useAlpha = (cmd.flags & Tilesheet.TILE_ALPHA) != 0;
-					var useRect = (cmd.flags & Tilesheet.TILE_RECT) != 0;
-					var useOrigin = (cmd.flags & Tilesheet.TILE_ORIGIN) != 0;
+					var useScale = (flags & Tilesheet.TILE_SCALE) != 0;
+					var useRotation = (flags & Tilesheet.TILE_ROTATION) != 0;
+					var useTransform = (flags & Tilesheet.TILE_TRANS_2x2) != 0;
+					var useRGB = (flags & Tilesheet.TILE_RGB) != 0;
+					var useAlpha = (flags & Tilesheet.TILE_ALPHA) != 0;
+					var useRect = (flags & Tilesheet.TILE_RECT) != 0;
+					var useOrigin = (flags & Tilesheet.TILE_ORIGIN) != 0;
+					var useRGBOffset = (flags & Tilesheet.TILE_TRANS_COLOR) != 0;
 
-					var blendMode:BlendMode = switch(cmd.flags & 0xF0000) {
+					var blendMode:BlendMode = switch(flags & 0xF0000) {
 						case Tilesheet.TILE_BLEND_ADD:		ADD;
 						case Tilesheet.TILE_BLEND_MULTIPLY:	MULTIPLY;
 						case Tilesheet.TILE_BLEND_SCREEN:	SCREEN;
-						case _: switch(cmd.flags & 0xF00000) {
+						case _: switch(flags & 0xF00000) {
 							case Tilesheet.TILE_BLEND_DARKEN:         DARKEN;
 							case Tilesheet.TILE_BLEND_LIGHTEN:        LIGHTEN;
 							case Tilesheet.TILE_BLEND_OVERLAY:        OVERLAY;
 							case Tilesheet.TILE_BLEND_HARDLIGHT:      HARDLIGHT;
-							case _: switch(cmd.flags & 0xF000000) {
+							case _: switch(flags & 0xF000000) {
 								case Tilesheet.TILE_BLEND_DIFFERENCE: DIFFERENCE;
 								case Tilesheet.TILE_BLEND_INVERT:     INVERT;
 								case _:                               NORMAL;
@@ -1107,6 +1276,7 @@ class ConsoleRenderer extends AbstractRenderer {
 					var transformIndex = 0;
 					var rgbIndex = 0;
 					var alphaIndex = 0;
+					var rgbOffsetIndex = 0;
 
 					var stride = 3;
 					if (useRect) {
@@ -1132,10 +1302,14 @@ class ConsoleRenderer extends AbstractRenderer {
 						alphaIndex = stride;
 						stride += 1;
 					}
+					if (useRGBOffset) {
+						rgbOffsetIndex = stride;
+						stride += 4;
+					}
 
-					var totalCount = cmd.tileData.length;
-					if (cmd.count >= 0 && totalCount > cmd.count) {
-						totalCount = cmd.count;
+					var totalCount = tileData.length;
+					if (count >= 0 && totalCount > count) {
+						totalCount = count;
 					}
 					var itemCount = div (totalCount, stride);
 					if (itemCount <= 0) {
@@ -1143,51 +1317,51 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 
 					var tileID = -1;
-					var rect:Rectangle = cmd.sheet.__rectTile;
-					var tileUV:Rectangle = cmd.sheet.__rectUV;
-					var center:Point = cmd.sheet.__point;
+					var rect:Rectangle = sheet.__rectTile;
+					var tileUV:Rectangle = sheet.__rectUV;
+					var center:Point = sheet.__point;
 
 					var skippedItemCount = 0;
 					var vertexCount = itemCount * 4;
-					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, vertexCount);	
+					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, vertexCount);	
 					var out = vertexBuffer.lock ();
 
 					for (itemIndex in 0...itemCount) {
 
 						var index = itemIndex * stride;
 
-						var x = cmd.tileData[index + 0];
-						var y = cmd.tileData[index + 1];
+						var x = tileData[index + 0];
+						var y = tileData[index + 1];
 
 						if (useRect) {
 
 							tileID = -1;
 
-							rect.x = cmd.tileData[index + 2];
-							rect.y = cmd.tileData[index + 3];
-							rect.width = cmd.tileData[index + 4];
-							rect.height = cmd.tileData[index + 5];
+							rect.x = tileData[index + 2];
+							rect.y = tileData[index + 3];
+							rect.width = tileData[index + 4];
+							rect.height = tileData[index + 5];
 							
 							if (useOrigin) {
-								center.x = cmd.tileData[index + 6];
-								center.y = cmd.tileData[index + 7];
+								center.x = tileData[index + 6];
+								center.y = tileData[index + 7];
 							} else {
 								center.setTo(0, 0);
 							}
 							
 							tileUV.setTo(
-								rect.left / cmd.sheet.__bitmap.width,
-								rect.top / cmd.sheet.__bitmap.height,
-								rect.right / cmd.sheet.__bitmap.width,
-								rect.bottom / cmd.sheet.__bitmap.height
+								rect.left / sheet.__bitmap.width,
+								rect.top / sheet.__bitmap.height,
+								rect.right / sheet.__bitmap.width,
+								rect.bottom / sheet.__bitmap.height
 							);
 
 						} else {
 
-							tileID = Std.int (cmd.tileData[index + 2]);
-							cmd.sheet.copyTileRect(rect, tileID);	
-							cmd.sheet.copyTileCenter(center, tileID);	
-							cmd.sheet.copyTileUVs(tileUV, tileID);	
+							tileID = convertInt (tileData[index + 2]);
+							sheet.copyTileRect(rect, tileID);
+							sheet.copyTileCenter(center, tileID);
+							sheet.copyTileUVs(tileUV, tileID);
 
 						}
 
@@ -1198,39 +1372,50 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						var alpha = object.__worldAlpha;
 						var red:UInt8 = 255, green:UInt8 = 255, blue:UInt8 = 255;
+						var redOffset:UInt8 = 0, greenOffset:UInt8 = 0, blueOffset:UInt8 = 0, alphaOffset:UInt8 = 0;
 						var scale = 1.0;
 						var rotation = 0.0;
 						var a = 0.0, b = 0.0, c = 0.0, d = 0.0, tx = 0.0, ty = 0.0;
 
-						if (useRGB) {
-							// TODO(james4k): premultiplied alpha?
-							red   = Std.int (cmd.tileData[index + rgbIndex + 0] * 255);
-							green = Std.int (cmd.tileData[index + rgbIndex + 1] * 255);
-							blue  = Std.int (cmd.tileData[index + rgbIndex + 2] * 255);
+						if (useAlpha) {
+							alpha *= tileData[index + alphaIndex];
 						}
 
-						if (useAlpha) {
-							alpha *= cmd.tileData[index + alphaIndex];	
+						if (useRGB) {
+							red   = convertInt (tileData[index + rgbIndex + 0] * alpha * 255.0);
+							green = convertInt (tileData[index + rgbIndex + 1] * alpha * 255.0);
+							blue  = convertInt (tileData[index + rgbIndex + 2] * alpha * 255.0);
+						} else {
+							red   = convertInt (alpha * 255.0);
+							green = convertInt (alpha * 255.0);
+							blue  = convertInt (alpha * 255.0);
 						}
 
 						if (useScale) {
-							scale = cmd.tileData[index + scaleIndex];
+							scale = tileData[index + scaleIndex];
 						}
 
 						if (useRotation) {
-							rotation = cmd.tileData[index + rotationIndex];
+							rotation = tileData[index + rotationIndex];
 						}
 
 						if (useTransform) {
-							a = cmd.tileData[index + transformIndex + 0];
-							b = cmd.tileData[index + transformIndex + 1];
-							c = cmd.tileData[index + transformIndex + 2];
-							d = cmd.tileData[index + transformIndex + 3];
+							a = tileData[index + transformIndex + 0];
+							b = tileData[index + transformIndex + 1];
+							c = tileData[index + transformIndex + 2];
+							d = tileData[index + transformIndex + 3];
 						} else {
 							a = scale * Math.cos (rotation);
 							b = scale * Math.sin (rotation);
 							c = -b;
 							d = a;
+						}
+
+						if (useRGBOffset) {
+							redOffset    = convertInt (tileData[index + rgbOffsetIndex + 0]);
+							greenOffset  = convertInt (tileData[index + rgbOffsetIndex + 1]);
+							blueOffset   = convertInt (tileData[index + rgbOffsetIndex + 2]);
+							alphaOffset  = convertInt (tileData[index + rgbOffsetIndex + 3]);
 						}
 
 						var tx = x - (center.x * a + center.y * c);
@@ -1245,24 +1430,31 @@ class ConsoleRenderer extends AbstractRenderer {
 
 						out.vec3 (a*w1 + c*h1 + tx, d*h1 + b*w1 + ty, 0);
 						out.vec2 (tileUV.x, tileUV.y);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
+						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 						out.vec3 (a*w0 + c*h1 + tx, d*h1 + b*w0 + ty, 0);
 						out.vec2 (tileUV.width, tileUV.y);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
+						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 						out.vec3 (a*w0 + c*h0 + tx, d*h0 + b*w0 + ty, 0);
 						out.vec2 (tileUV.width, tileUV.height);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
+						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 						out.vec3 (a*w1 + c*h0 + tx, d*h0 + b*w1 + ty, 0);
 						out.vec2 (tileUV.x, tileUV.height);
-						out.color (red, green, blue, Std.int(alpha * 0xff));
+						out.color (red, green, blue, convertInt(alpha * 0xff));
+						out.color (redOffset, greenOffset, blueOffset, alphaOffset);
 
 					}
 
 					vertexBuffer.unlock ();
+
 					itemCount -= skippedItemCount;
+					if (itemCount <= 0) continue;
+
 					vertexCount = itemCount * 4;
 
 					var indexBuffer = transientIndexBuffer (itemCount * 6);
@@ -1278,24 +1470,39 @@ class ConsoleRenderer extends AbstractRenderer {
 					indexBuffer.unlock ();
 
 					setObjectTransform (object);
-					transform.append (viewProj);
-					transform.transpose ();
 
-					var texture = bitmapDataTexture (cmd.sheet.__bitmap);
+					var usePalette = (sheet.__bitmapPalette != null);
+
+					var texture = bitmapDataTexture (sheet.__bitmap);
+					var texturePalette = if (usePalette) {
+						bitmapDataTexture (sheet.__bitmapPalette);
+					} else {
+						texture;
+					};
+
+					var colorMul:Array<cpp.Float32> = tempColor;
+					colorMul[0] = colorMultiplier[0] * fillColor[0];
+					colorMul[1] = colorMultiplier[1] * fillColor[1];
+					colorMul[2] = colorMultiplier[2] * fillColor[2];
+					colorMul[3] = colorMultiplier[3] * fillColor[3];
 
 					setBlendState (blendMode);
-					ctx.bindShader (defaultShader);
-					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-					ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-					ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+					bindShaderDefault (useColorTransform || useRGBOffset, usePalette, colorMul, colorOffset);
 					ctx.setVertexSource (vertexBuffer);
 					ctx.setIndexSource (indexBuffer);
-					ctx.setTexture (0, texture);
 					ctx.setTextureAddressMode (0, Clamp, Clamp);
-					if (cmd.smooth) {
+					if (smooth) {
 						ctx.setTextureFilter (0, TextureFilter.Linear, TextureFilter.Linear);
 					} else {
 						ctx.setTextureFilter (0, TextureFilter.Nearest, TextureFilter.Nearest);
+					}
+					if (usePalette) {
+						ctx.setTextureAddressMode (1, Clamp, Clamp);
+						ctx.setTextureFilter (1, TextureFilter.Nearest, TextureFilter.Nearest);
+					}
+					ctx.setTexture (0, texture);
+					if (usePalette) {
+						ctx.setTexture (1, texturePalette);
 					}
 					ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, itemCount * 2);
 					setBlendState (this.blendMode);
@@ -1315,8 +1522,6 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 
 					setObjectTransform (object);
-					transform.append (viewProj);
-					transform.transpose ();
 
 					var texture = bitmapDataTexture (fillBitmap);
 
@@ -1324,7 +1529,10 @@ class ConsoleRenderer extends AbstractRenderer {
 					var cmdIndices = cmd.indices;
 					var cmdUvtData = cmd.uvtData;
 					var vertexCount = div (cmdVertices.length, 2);
-					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColor, vertexCount);	
+					var indexCount = cmdIndices.length;
+					if (vertexCount <= 0 || indexCount <= 0) continue;
+
+					var vertexBuffer = transientVertexBuffer (VertexDecl.PositionTexcoordColorColor, vertexCount);	
 					var out = vertexBuffer.lock ();
 					var i = 0;
 					while (i < cmd.vertices.length) {
@@ -1332,11 +1540,11 @@ class ConsoleRenderer extends AbstractRenderer {
 						out.vec2 (cmdUvtData[i], cmdUvtData[i+1]);
 						// TODO(james4k): color
 						out.color (0xff, 0xff, 0xff, 0xff);
+						out.color (0, 0, 0, 0);
 						i += 2;
 					}
 					vertexBuffer.unlock ();
 					
-					var indexCount = cmdIndices.length;
 					var indexBuffer = transientIndexBuffer (indexCount);
 					var unsafeIndices = indexBuffer.lock ();
 					for (i in 0...indexCount) {
@@ -1344,19 +1552,22 @@ class ConsoleRenderer extends AbstractRenderer {
 					}
 					indexBuffer.unlock ();
 
-					ctx.bindShader (defaultShader);
-					ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-					ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-					ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+					var colorMul:Array<cpp.Float32> = tempColor;
+					colorMul[0] = colorMultiplier[0] * fillColor[0];
+					colorMul[1] = colorMultiplier[1] * fillColor[1];
+					colorMul[2] = colorMultiplier[2] * fillColor[2];
+					colorMul[3] = colorMultiplier[3] * fillColor[3];
+
+					bindShaderDefault (useColorTransform, false, colorMul, colorOffset);
 					ctx.setVertexSource (vertexBuffer);
 					ctx.setIndexSource (indexBuffer);
-					ctx.setTexture (0, texture);
 					ctx.setTextureAddressMode (0, Wrap, Wrap);
 					if (fillBitmapSmooth) {
 						ctx.setTextureFilter (0, TextureFilter.Linear, TextureFilter.Linear);
 					} else {
 						ctx.setTextureFilter (0, TextureFilter.Nearest, TextureFilter.Nearest);
 					}
+					ctx.setTexture (0, texture);
 					ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (cmd.indices.length, 3));
 
 				case BEGIN_GRADIENT_FILL:
@@ -1413,8 +1624,6 @@ class ConsoleRenderer extends AbstractRenderer {
 			//PolyK.triangulate (triangles, points);
 
 			setObjectTransform (object);
-			transform.append (viewProj);
-			transform.transpose ();
 
 			var vertexCount = div (points.length, 2) + 1;
 			var indexCount = (vertexCount - 2) * 3;
@@ -1437,12 +1646,14 @@ class ConsoleRenderer extends AbstractRenderer {
 			}
 			indexBuffer.unlock ();
 
-			ctx.bindShader (fillShader);
-			ctx.setPixelShaderConstantF (0, cpp.Pointer.arrayElem (scissorRect, 0), 1);
-			ctx.setVertexShaderConstantF (0, PointerUtil.fromMatrix (transform), 4);
-			ctx.setVertexShaderConstantF (4, cpp.Pointer.arrayElem (fillColor, 0), 1);
+			var colorMul:Array<cpp.Float32> = tempColor;
+			colorMul[0] = colorMultiplier[0] * fillColor[0];
+			colorMul[1] = colorMultiplier[1] * fillColor[1];
+			colorMul[2] = colorMultiplier[2] * fillColor[2];
+			colorMul[3] = colorMultiplier[3] * fillColor[3];
+
+			bindShaderFill (useColorTransform, colorMul, colorOffset);
 			ctx.setVertexSource (vertexBuffer);
-			//ctx.draw (Primitive.Triangle, 0, vertexCount - 2);
 			ctx.setIndexSource (indexBuffer);
 			ctx.drawIndexed (Primitive.Triangle, vertexCount, 0, div (indexCount, 3));
 
@@ -1450,7 +1661,269 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	}
 
+	private function setColorTransform(ct:ColorTransform):Void {
+
+		colorMultiplier[0] = ct.redMultiplier * ct.alphaMultiplier;
+		colorMultiplier[1] = ct.greenMultiplier * ct.alphaMultiplier;
+		colorMultiplier[2] = ct.blueMultiplier * ct.alphaMultiplier;
+		colorMultiplier[3] = ct.alphaMultiplier;
+		colorOffset[0] = ct.redOffset / 255.0;
+		colorOffset[1] = ct.greenOffset / 255.0;
+		colorOffset[2] = ct.blueOffset / 255.0;
+		colorOffset[3] = ct.alphaOffset / 255.0;
+
+		useColorTransform = (
+			Math.abs(ct.redMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.greenMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.blueMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.alphaMultiplier - 1.0) > 0.001 ||
+			Math.abs(ct.redOffset) > 0.001 ||
+			Math.abs(ct.greenOffset) > 0.001 ||
+			Math.abs(ct.blueOffset) > 0.001 ||
+			Math.abs(ct.alphaOffset) > 0.001
+		);
+
+	}
+
+
+	private static var workQueue:cpp.vm.Deque<Void->Void> = null;
+	private static var workCount:cpp.AtomicInt = 0;
+
+	private static function initWorkers():Void
+	{
+		if (workQueue == null)
+		{
+			workQueue = new cpp.vm.Deque<Void->Void> ();
+			cpp.vm.Thread.create(workerThread);
+		}
+	}
+
+	// queueWork queues some work that will finish by the end of the frame.
+	private static function queueWork (work:Void->Void):Void {
+
+		var ptrWorkCount = cpp.Pointer.addressOf (workCount);
+		if (ptrWorkCount.atomicInc () >= 32) {
+			work ();
+			ptrWorkCount.atomicDec ();
+		} else {
+			workQueue.add (work);
+		}
+
+	}
+
+	// finishWork finishes up and waits for any ongoing work.
+	private static function finishWork ():Void {
+
+		while (workCount != 0) {
+
+			var work = workQueue.pop (false);
+			if (work == null) {
+				continue;
+			}
+
+			work ();
+
+			var ptrWorkCount = cpp.Pointer.addressOf (workCount);
+			ptrWorkCount.atomicDec ();
+
+		}
+
+	}
+
+	private static function workerThread ():Void {
+
+		while (true) {
+
+			var work = workQueue.pop (true);
+			if (work == null) {
+				return;
+			}
+
+			work ();
+
+			var ptrWorkCount = cpp.Pointer.addressOf (workCount);
+			ptrWorkCount.atomicDec ();
+
+			// avoid keeping something alive via GC's conservative stack scan
+			work = null;
+
+		}
+
+	}
+
+
+	// alphaHack gets the world alpha for an object without the color transform alpha
+	// applied if it exists. Doubtful this works with multiple color transforms up
+	// the object hierarchy.
+	// NOTE(james4k): The alpha and color transforms of the object are coupled in a weird
+	// way when rendering with premultiplied alpha, and not sure what to do without
+	// tearing up a bunch of OpenFL. So we do our best to decouple them here.
+	private function alphaHack(object:DisplayObject):Float {
+
+			// note: worldAlpha has color transform alpha applied
+			var alpha = object.__worldAlpha;
+			if (alpha > 0.001 && Math.abs(object.alpha - colorMultiplier[3]) < 0.001) {
+				return alpha / object.alpha;
+			}
+			return alpha;
+
+	}
+
+
+	// matrixOrtho is a duplicate of Matrix4.createOrtho without Dynamic allocs/boxing.
+	private static function matrixOrtho(dest:Matrix4, x0:Float, x1:Float, y0:Float, y1:Float, zNear:Float, zFar:Float):Void {
+
+		var sx = 1.0 / (x1 - x0);
+		var sy = 1.0 / (y1 - y0);
+		var sz = 1.0 / (zFar - zNear);
+
+		dest[0] = 2.0 * sx;
+		dest[1] = 0.0;
+		dest[2] = 0.0;
+		dest[3] = 0.0;
+
+		dest[4] = 0.0;
+		dest[5] = 2.0 * sy;
+		dest[6] = 0.0;
+		dest[7] = 0.0;
+
+		dest[8] = 0.0;
+		dest[9] = 0.0;
+		dest[10] = -2.0 * sz;
+		dest[11] = 0.0;
+
+		dest[12] = -(x0 + x1) * sx;
+		dest[13] = -(y0 + y1) * sy;
+		dest[14] = -(zNear + zFar) * sz;
+		dest[15] = 1.0;
+
+	}
+
+
+	// matrixABCD is a duplicate of Matrix4.createABCD without Dynamic allocs/boxing.
+	private static function matrixABCD(dest:Matrix4, a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
+
+		dest[0] = a;
+		dest[1] = b;
+		dest[2] = 0.0;
+		dest[3] = 0.0;
+
+		dest[4] = c;
+		dest[5] = d;
+		dest[6] = 0.0;
+		dest[7] = 0.0;
+
+		dest[8] = 0.0;
+		dest[9] = 0.0;
+		dest[10] = 1.0;
+		dest[11] = 0.0;
+
+		dest[12] = tx;
+		dest[13] = ty;
+		dest[14] = 0.0;
+		dest[15] = 1.0;
+
+	}
+
+
+	// matrixMultiply is a duplicate of Matrix4.append without extra allocations.
+	private static function matrixMultiply(dest:Matrix4, a:Matrix4, b:Matrix4):Void {
+
+		var m111:Float = a[0], m121:Float = a[4], m131:Float = a[8], m141:Float = a[12],
+			m112:Float = a[1], m122:Float = a[5], m132:Float = a[9], m142:Float = a[13],
+			m113:Float = a[2], m123:Float = a[6], m133:Float = a[10], m143:Float = a[14],
+			m114:Float = a[3], m124:Float = a[7], m134:Float = a[11], m144:Float = a[15],
+			m211:Float = b[0], m221:Float = b[4], m231:Float = b[8], m241:Float = b[12],
+			m212:Float = b[1], m222:Float = b[5], m232:Float = b[9], m242:Float = b[13],
+			m213:Float = b[2], m223:Float = b[6], m233:Float = b[10], m243:Float = b[14],
+			m214:Float = b[3], m224:Float = b[7], m234:Float = b[11], m244:Float = b[15];
+
+		dest[0] = m111 * m211 + m112 * m221 + m113 * m231 + m114 * m241;
+		dest[1] = m111 * m212 + m112 * m222 + m113 * m232 + m114 * m242;
+		dest[2] = m111 * m213 + m112 * m223 + m113 * m233 + m114 * m243;
+		dest[3] = m111 * m214 + m112 * m224 + m113 * m234 + m114 * m244;
+
+		dest[4] = m121 * m211 + m122 * m221 + m123 * m231 + m124 * m241;
+		dest[5] = m121 * m212 + m122 * m222 + m123 * m232 + m124 * m242;
+		dest[6] = m121 * m213 + m122 * m223 + m123 * m233 + m124 * m243;
+		dest[7] = m121 * m214 + m122 * m224 + m123 * m234 + m124 * m244;
+
+		dest[8] = m131 * m211 + m132 * m221 + m133 * m231 + m134 * m241;
+		dest[9] = m131 * m212 + m132 * m222 + m133 * m232 + m134 * m242;
+		dest[10] = m131 * m213 + m132 * m223 + m133 * m233 + m134 * m243;
+		dest[11] = m131 * m214 + m132 * m224 + m133 * m234 + m134 * m244;
+
+		dest[12] = m141 * m211 + m142 * m221 + m143 * m231 + m144 * m241;
+		dest[13] = m141 * m212 + m142 * m222 + m143 * m232 + m144 * m242;
+		dest[14] = m141 * m213 + m142 * m223 + m143 * m233 + m144 * m243;
+		dest[15] = m141 * m214 + m142 * m224 + m143 * m234 + m144 * m244;
+
+	}
+
+
+	// matrixTranspose is a duplicate of Matrix4.transpose without extra allocations.
+	// TODO(james4k): shouldn't need to transpose in most cases
+	private static function matrixTranspose(dest:Matrix4):Void {
+
+		var orig1 = dest[1];
+		var orig2 = dest[2];
+		var orig3 = dest[3];
+		var orig4 = dest[4];
+		var orig6 = dest[6];
+		var orig7 = dest[7];
+		var orig8 = dest[8];
+		var orig9 = dest[9];
+		var orig11 = dest[11];
+		var orig12 = dest[12];
+		var orig13 = dest[13];
+		var orig14 = dest[14];
+		dest[1] = orig4;
+		dest[2] = orig8;
+		dest[3] = orig12;
+		dest[4] = orig1;
+		dest[6] = orig9;
+		dest[7] = orig13;
+		dest[8] = orig2;
+		dest[9] = orig6;
+		dest[11] = orig14;
+		dest[12] = orig3;
+		dest[13] = orig7;
+		dest[14] = orig11;
+
+	}
+
+
+	// rectangleIntersection is a duplicate of Rectangle.intersection without extra allocations.
+	private static function rectangleIntersection(dest:Rectangle, other:Rectangle):Void {
+
+		var x0 = (dest.x < other.x) ? other.x : dest.x;
+		var x1 = (dest.right > other.right) ? other.right : dest.right;
+
+		if (x1 <= x0) {
+			dest.x = 0;
+			dest.y = 0;
+			dest.width = 0;
+			dest.height = 0;
+			return;
+		}
+
+		var y0 = (dest.y < other.y) ? other.y : dest.y;
+		var y1 = (dest.bottom > other.bottom) ? other.bottom : dest.bottom;
+
+		if (y1 <= y0) {
+			dest.x = 0;
+			dest.y = 0;
+			dest.width = 0;
+			dest.height = 0;
+			return;
+		}
+
+		dest.x = x0;
+		dest.y = y0;
+		dest.width = x1 - x0;
+		dest.height = y1 - y0;
 	
+	}
 	
 }
 
