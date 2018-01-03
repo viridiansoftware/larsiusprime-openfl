@@ -8,6 +8,11 @@ float4 g_scissorRect     : register (c0);
 TEXTURE2D g_texture TEXTURE_REG (0);
 SAMPLER2D g_sampler SAMPLER_REG (0);
 
+#ifdef USE_COLOR_PALETTE
+TEXTURE2D g_texturePalette TEXTURE_REG (1);
+SAMPLER2D g_samplerPalette SAMPLER_REG (1);
+#endif
+
 
 struct PS_IN {
 
@@ -30,15 +35,22 @@ float4 main (PS_IN In) : PS_TARGET_OUT {
 
 	PS_OUT Out;
 
+	float4 color = TEX2D (g_texture, g_sampler, In.Texcoord);
+
+#ifdef USE_COLOR_PALETTE
+	float4 palette = TEX2D (g_texturePalette, g_samplerPalette, float2(color.r, 0.0));
+	color = float4(palette.rgb, color.a);
+#endif
+
 #ifdef USE_COLOR_TRANSFORM
 	Out.Color = colorTransform(
-		TEX2D (g_texture, g_sampler, In.Texcoord),
+		color,
 		In.ColorMul,
 		In.ColorAdd
 	);
 
 #else
-	Out.Color = TEX2D (g_texture, g_sampler, In.Texcoord) * In.ColorMul;
+	Out.Color = color * In.ColorMul;
 #endif
 
 #ifdef USE_SCISSOR_TEST
