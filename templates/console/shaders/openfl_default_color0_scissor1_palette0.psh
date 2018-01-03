@@ -1,0 +1,2 @@
+#define USE_SCISSOR_TEST
+#include "openfl_default.psh"

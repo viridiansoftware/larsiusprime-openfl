@@ -1,0 +1,2 @@
+#define USE_COLOR_PALETTE
+#include "openfl_default.psh"

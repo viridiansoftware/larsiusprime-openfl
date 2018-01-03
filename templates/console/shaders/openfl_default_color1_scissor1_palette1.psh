@@ -1,0 +1,4 @@
+#define USE_COLOR_PALETTE
+#define USE_COLOR_TRANSFORM
+#define USE_SCISSOR_TEST
+#include "openfl_default.psh"
