@@ -37,6 +37,7 @@ class Tilesheet {
 	@:noCompletion private static var __defaultPoint = new Point (0, 0);
 	
 	@:noCompletion private var __bitmap:BitmapData;
+	@:noCompletion private var __bitmapPalette:BitmapData;
 	@:noCompletion private var __centerPoints:Array<Float>; // stride of 2
 	@:noCompletion private var __tileRects:Array<Float>; // stride of 4
 	@:noCompletion private var __tileUVs:Array<Float>; // stride of 4
@@ -58,9 +59,10 @@ class Tilesheet {
 	 *Creates new TileSheet Object
 	 * @param	image a bitmap data to create tiles from
 	 */
-	public function new (image:BitmapData) {
+	public function new (image:BitmapData, palette:BitmapData = null) {
 		
 		__bitmap = image;
+		__bitmapPalette = palette;
 		__centerPoints = new Array<Float> ();
 		__tileRects = new Array<Float> ();
 		__tileUVs = new Array<Float> ();
