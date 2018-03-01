@@ -418,7 +418,7 @@ class Matrix {
 	}
 	
 	
-	public function translate (dx:Float, dy:Float):Void {
+	public inline function translate (dx:Float, dy:Float):Void {
 		
 		tx += dx;
 		ty += dy;
