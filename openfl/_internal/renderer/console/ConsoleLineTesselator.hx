@@ -328,7 +328,6 @@ class ConsoleLineTesselator {
 				// midpoint of inside corners
 				intersectX = (originX + startEndY*radius + originX + -nextEndY*radius) * 0.5;
 				intersectY = (originY + -startEndX*radius + originY + nextEndX*radius) * 0.5;
-				trace ("need to verify this intersectLines failsafe is sane");
 			}
 			corner0X = originX + -startEndY*radius;
 			corner0Y = originY + startEndX*radius;
@@ -352,7 +351,6 @@ class ConsoleLineTesselator {
 				// midpoint of inside corners
 				intersectX = (originX + -startEndY*radius + originX + nextEndY*radius) * 0.5;
 				intersectY = (originY + startEndX*radius + originY + -nextEndX*radius) * 0.5;
-				trace ("need to verify this intersectLines failsafe is sane");
 			}
 			corner0X = originX + startEndY*radius;
 			corner0Y = originY + -startEndX*radius;

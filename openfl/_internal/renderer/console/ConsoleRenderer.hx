@@ -419,7 +419,7 @@ class ConsoleRenderer extends AbstractRenderer {
 	}
 
 
-	private function setObjectTransform (object:DisplayObject) {
+	private inline function setObjectTransform (object:DisplayObject) {
 
 		object.__getWorldTransform ();
 		var matrix = object.__worldTransform;
@@ -497,17 +497,20 @@ class ConsoleRenderer extends AbstractRenderer {
 
 			if (image.dirty && image.buffer.data != null) {
 
+				/*
 				#if vita
+				var data = image.buffer.data.buffer.getData ();
 				queueWork(function():Void {
 					t.updateFromRGBA (
-						cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+						cast (cpp.Pointer.arrayElem (data, 0))
 					);
 				});
 				#else
+				*/
 				t.updateFromRGBA (
 					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
 				);
-				#end
+				//#end
 
 				image.dirty = false;
 
@@ -527,17 +530,18 @@ class ConsoleRenderer extends AbstractRenderer {
 
 		if (image.buffer.data != null) {
 
-			#if vita
+			/*#if vita
+			var data = image.buffer.data.buffer.getData ();
 			queueWork(function():Void {
 				texture.updateFromRGBA (
-					cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
+					cast (cpp.Pointer.arrayElem (data, 0))
 				);
 			});
-			#else
+			#else*/
 			texture.updateFromRGBA (
 				cast (cpp.Pointer.arrayElem (image.buffer.data.buffer.getData (), 0))
 			);
-			#end
+			//#end
 
 		}
 
@@ -1500,6 +1504,12 @@ class ConsoleRenderer extends AbstractRenderer {
 						ctx.setTextureAddressMode (1, Clamp, Clamp);
 						ctx.setTextureFilter (1, TextureFilter.Nearest, TextureFilter.Nearest);
 					}
+					#if vita
+						//HACK: workaround an internal cache issue
+						if (usePalette) {
+							ctx.setTexture(0, whiteTexture);
+						}
+					#end
 					ctx.setTexture (0, texture);
 					if (usePalette) {
 						ctx.setTexture (1, texturePalette);
@@ -1801,7 +1811,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 
 	// matrixABCD is a duplicate of Matrix4.createABCD without Dynamic allocs/boxing.
-	private static function matrixABCD(dest:Matrix4, a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
+	private static inline function matrixABCD(dest:Matrix4, a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
 
 		dest[0] = a;
 		dest[1] = b;
@@ -1827,7 +1837,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 
 	// matrixMultiply is a duplicate of Matrix4.append without extra allocations.
-	private static function matrixMultiply(dest:Matrix4, a:Matrix4, b:Matrix4):Void {
+	private static inline function matrixMultiply(dest:Matrix4, a:Matrix4, b:Matrix4):Void {
 
 		var m111:Float = a[0], m121:Float = a[4], m131:Float = a[8], m141:Float = a[12],
 			m112:Float = a[1], m122:Float = a[5], m132:Float = a[9], m142:Float = a[13],
@@ -1863,7 +1873,7 @@ class ConsoleRenderer extends AbstractRenderer {
 
 	// matrixTranspose is a duplicate of Matrix4.transpose without extra allocations.
 	// TODO(james4k): shouldn't need to transpose in most cases
-	private static function matrixTranspose(dest:Matrix4):Void {
+	private static inline function matrixTranspose(dest:Matrix4):Void {
 
 		var orig1 = dest[1];
 		var orig2 = dest[2];
