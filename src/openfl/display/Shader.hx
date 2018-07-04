@@ -625,7 +625,7 @@ class Shader {
 	}
 	
 	
-	private function __updateGL ():Void {
+	private inline function __updateGL ():Void {
 		
 		var textureCount = 0;
 		
