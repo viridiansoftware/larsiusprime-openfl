@@ -139,7 +139,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function __setRenderDirty ():Void {
+	private inline function __setRenderDirty ():Void {
 		
 		#if !flash
 		if (!__dirty) {
@@ -165,7 +165,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	
 	
 	
-	private function get_alpha ():Float {
+	private inline function get_alpha ():Float {
 		
 		return __alpha;
 		
@@ -186,7 +186,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_colorTransform ():ColorTransform {
+	private inline function get_colorTransform ():ColorTransform {
 		
 		return __colorTransform;
 		
@@ -207,7 +207,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_id ():Int {
+	private inline function get_id ():Int {
 		
 		return __id;
 		
@@ -228,7 +228,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_matrix ():Matrix {
+	private inline function get_matrix ():Matrix {
 		
 		return __matrix;
 		
@@ -252,7 +252,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_originX ():Float {
+	private inline inline function get_originX ():Float {
 		
 		return __originX;
 		
@@ -273,7 +273,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_originY ():Float {
+	private inline function get_originY ():Float {
 		
 		return __originY;
 		
@@ -294,14 +294,14 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_rect ():Rectangle {
+	private inline function get_rect ():Rectangle {
 		
 		return __rect;
 		
 	}
 	
 	
-	private function set_rect (value:Rectangle):Rectangle {
+	private inline function set_rect (value:Rectangle):Rectangle {
 		
 		if (value != __rect) {
 			
@@ -472,7 +472,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_shader ():Shader {
+	private inline function get_shader ():Shader {
 		
 		return __shader;
 		
@@ -493,7 +493,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_tileset ():Tileset {
+	private inline function get_tileset ():Tileset {
 		
 		return __tileset;
 		
@@ -514,7 +514,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function get_visible ():Bool {
+	private inline function get_visible ():Bool {
 		
 		return __visible;
 		
@@ -563,7 +563,7 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 	}
 	
 	
-	private function set_y (value:Float):Float {
+	private inline function set_y (value:Float):Float {
 		
 		if (value != __matrix.ty) {
 			
@@ -576,12 +576,12 @@ class Tile #if ((openfl < "9.0.0") && enable_tile_array) implements ITile #end {
 		
 	}
 	
-	private function get_blendMode():BlendMode
+	private inline function get_blendMode():BlendMode
 	{
 		return __blendMode;
 	}
 	
-	private function set_blendMode (value:BlendMode):BlendMode {
+	private inline function set_blendMode (value:BlendMode):BlendMode {
 		
 		if (value != __blendMode) {
 			

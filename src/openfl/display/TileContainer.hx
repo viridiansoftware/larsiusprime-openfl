@@ -34,7 +34,7 @@ class TileContainer extends Tile implements ITileContainer {
 	}
 	
 	
-	public function addTile (tile:Tile):Tile {
+	public inline function addTile (tile:Tile):Tile {
 		
 		if (tile == null) return null;
 		
@@ -223,7 +223,7 @@ class TileContainer extends Tile implements ITileContainer {
 	
 	
 	
-	private function get_numTiles ():Int {
+	private inline function get_numTiles ():Int {
 		
 		return __length;
 		
