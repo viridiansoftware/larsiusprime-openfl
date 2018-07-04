@@ -352,20 +352,20 @@ class Rectangle {
 	
 	
 	
-	private function get_bottom ():Float { return y + height; }
-	private function set_bottom (b:Float):Float { height = b - y; return b; }
-	private function get_bottomRight ():Point { return new Point (x + width, y + height); }
-	private function set_bottomRight (p:Point):Point { width = p.x - x; height = p.y - y; return p.clone (); }
-	private function get_left ():Float { return x; }
-	private function set_left (l:Float):Float { width -= l - x; x = l; return l; }
-	private function get_right ():Float { return x + width; }
-	private function set_right (r:Float):Float { width = r - x; return r; }
-	private function get_size ():Point { return new Point (width, height); }
-	private function set_size (p:Point):Point { width = p.x; height = p.y; return p.clone (); }
-	private function get_top ():Float { return y; }
-	private function set_top (t:Float):Float { height -= t - y; y = t; return t; }
-	private function get_topLeft ():Point { return new Point (x, y); }
-	private function set_topLeft (p:Point):Point { x = p.x; y = p.y; return p.clone (); }
+	private inline function get_bottom ():Float { return y + height; }
+	private inline function set_bottom (b:Float):Float { height = b - y; return b; }
+	private inline function get_bottomRight ():Point { return new Point (x + width, y + height); }
+	private inline function set_bottomRight (p:Point):Point { width = p.x - x; height = p.y - y; return p.clone (); }
+	private inline function get_left ():Float { return x; }
+	private inline function set_left (l:Float):Float { width -= l - x; x = l; return l; }
+	private inline function get_right ():Float { return x + width; }
+	private inline function set_right (r:Float):Float { width = r - x; return r; }
+	private inline function get_size ():Point { return new Point (width, height); }
+	private inline function set_size (p:Point):Point { width = p.x; height = p.y; return p.clone (); }
+	private inline function get_top ():Float { return y; }
+	private inline function set_top (t:Float):Float { height -= t - y; y = t; return t; }
+	private inline function get_topLeft ():Point { return new Point (x, y); }
+	private inline function set_topLeft (p:Point):Point { x = p.x; y = p.y; return p.clone (); }
 	
 	
 }
