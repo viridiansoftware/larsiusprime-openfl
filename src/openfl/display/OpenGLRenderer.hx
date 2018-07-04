@@ -472,7 +472,7 @@ class OpenGLRenderer extends DisplayObjectRenderer {
 	}
 	
 	
-	private function __getMatrix (transform:Matrix):Array<Float> {
+	private inline function __getMatrix (transform:Matrix):Array<Float> {
 		
 		var _matrix = Matrix.__pool.get ();
 		_matrix.copyFrom (transform);
