@@ -48,7 +48,7 @@ class Matrix {
 	}
 	
 	
-	public function concat (m:Matrix):Void {
+	public inline function concat (m:Matrix):Void {
 		
 		var a1 = a * m.a + b * m.c;
 		b = a * m.b + b * m.d;
@@ -122,7 +122,7 @@ class Matrix {
 	}
 	
 	
-	public function copyFrom (sourceMatrix:Matrix):Void {
+	public inline function copyFrom (sourceMatrix:Matrix):Void {
 		
 		a = sourceMatrix.a;
 		b = sourceMatrix.b;
@@ -262,7 +262,7 @@ class Matrix {
 	}
 	
 	
-	public function identity ():Void {
+	public inline function identity ():Void {
 		
 		a = 1;
 		b = 0;
@@ -425,7 +425,7 @@ class Matrix {
 	}
 	
 	
-	public function translate (dx:Float, dy:Float):Void {
+	public inline function translate (dx:Float, dy:Float):Void {
 		
 		tx += dx;
 		ty += dy;
