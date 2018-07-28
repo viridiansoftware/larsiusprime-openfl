@@ -377,7 +377,7 @@ class Matrix {
 	}
 	
 	
-	public function setTo (a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
+	public inline function setTo (a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
 		
 		this.a = a;
 		this.b = b;
