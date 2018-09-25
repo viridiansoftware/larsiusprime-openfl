@@ -870,7 +870,7 @@ class Assets {
 		#if debug
 		var callstack = CallStack.callStack ();
 		callstack.reverse();
-		trace (CallStack.toString (callstack) + "\n" + message);
+		//trace (CallStack.toString (callstack) + "\n" + message);
 		#else
 		trace (message);
 		#end
