@@ -36,12 +36,15 @@ class DrawCommandReader {
 	private var prev:DrawCommandType;
 	private var tsPos:Int;
 	
+	private var vfPos:Int;
+	private var viPos:Int;
+	
 	
 	public function new (buffer:DrawCommandBuffer) {
 		
 		this.buffer = buffer;
 		
-		bPos = iPos = fPos = oPos = ffPos = iiPos = tsPos = 0;
+		bPos = iPos = fPos = oPos = ffPos = iiPos = tsPos = vfPos = viPos = 0;
 		prev = UNKNOWN;
 		
 	}
@@ -90,7 +93,8 @@ class DrawCommandReader {
 			
 			case DRAW_QUADS:
 				
-				oPos += 3; //rects, indices, transforms
+				vfPos += 2; //rects, transforms
+				viPos += 1; //indices
 			
 			case DRAW_RECT:
 				
@@ -167,6 +171,20 @@ class DrawCommandReader {
 	}
 	
 	
+	@:noCompletion private inline function fVec (index:Int):Vector<Float> {
+		
+		return buffer.vf[vfPos + index];
+		
+	}
+	
+	
+	@:noCompletion private inline function iVec (index:Int):Vector<Int> {
+		
+		return buffer.vi[viPos + index];
+		
+	}
+	
+	
 	@:noCompletion private inline function fArr (index:Int):Array<Float> {
 		
 		return buffer.ff[ffPos + index];
@@ -227,7 +245,7 @@ class DrawCommandReader {
 	
 	public function reset ():Void {
 		
-		bPos = iPos = fPos = oPos = ffPos = iiPos = tsPos = 0;
+		bPos = iPos = fPos = oPos = ffPos = iiPos = tsPos = vfPos = viPos = 0;
 		
 	}
 	
@@ -334,9 +352,9 @@ abstract DrawEllipseView (DrawCommandReader) {
 abstract DrawQuadsView (DrawCommandReader) {
 	
 	public inline function new (d:DrawCommandReader) { this = d; }
-	public var rects (get, never):Vector<Float>; private inline function get_rects ():Vector<Float> { return cast this.obj (0); }
-	public var indices (get, never):Vector<Int>; private inline function get_indices ():Vector<Int> { return cast this.obj (1); }
-	public var transforms (get, never):Vector<Float>; private inline function get_transforms ():Vector<Float> { return cast this.obj (2); }
+	public var rects (get, never):Vector<Float>; private inline function get_rects ():Vector<Float> { return cast this.fVec (0); }
+	public var indices (get, never):Vector<Int>; private inline function get_indices ():Vector<Int> { return cast this.iVec (0); }
+	public var transforms (get, never):Vector<Float>; private inline function get_transforms ():Vector<Float> { return cast this.fVec(1); }
 	
 }
 

@@ -38,6 +38,9 @@ class DrawCommandBuffer {
 	private var ii:Array<Array<Int>>;
 	private var o:Array<Dynamic>;
 	
+	private var vf:Array<Vector<Float>>;
+	private var vi:Array<Vector<Int>>;
+	
 	
 	public function new () {
 		
@@ -51,6 +54,8 @@ class DrawCommandBuffer {
 			o = [];
 			ff = [];
 			ii = [];
+			vf = [];
+			vi = [];
 			
 			copyOnWrite = true;
 			
@@ -74,6 +79,8 @@ class DrawCommandBuffer {
 			this.o = other.o;
 			this.ff = other.ff;
 			this.ii = other.ii;
+			this.vf = other.vf;
+			this.vi = other.vi;
 			this.copyOnWrite = other.copyOnWrite = true;
 			
 			return other;
@@ -179,6 +186,8 @@ class DrawCommandBuffer {
 		o = empty.o;
 		ff = empty.ff;
 		ii = empty.ii;
+		vf = empty.vf;
+		vi = empty.vi;
 		
 		copyOnWrite = true;
 		
@@ -233,6 +242,8 @@ class DrawCommandBuffer {
 		o = null;
 		ff = null;
 		ii = null;
+		vf = null;
+		vi = null;
 		
 	}
 	
@@ -267,9 +278,9 @@ class DrawCommandBuffer {
 		prepareWrite ();
 		
 		types.push (DRAW_QUADS);
-		o.push (rects);
-		o.push (indices);
-		o.push (transforms);
+		vf.push (rects);
+		vi.push (indices);
+		vf.push (transforms);
 		
 	}
 	
@@ -403,6 +414,8 @@ class DrawCommandBuffer {
 			o = o.copy ();
 			ff = ff.copy ();
 			ii = ii.copy ();
+			vf = vf.copy ();
+			vi = vi.copy ();
 			
 			copyOnWrite = false;
 			
