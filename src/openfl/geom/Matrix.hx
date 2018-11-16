@@ -448,7 +448,7 @@ class Matrix {
 	}
 	
 	
-	public function equals (matrix:Matrix):Bool {
+	public inline function equals (matrix:Matrix):Bool {
 		
 		return (matrix != null && tx == matrix.tx && ty == matrix.ty && a == matrix.a && b == matrix.b && c == matrix.c && d == matrix.d);
 		
@@ -612,7 +612,7 @@ class Matrix {
 	}
 	
 	
-	public function setTo (a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
+	public inline function setTo (a:Float, b:Float, c:Float, d:Float, tx:Float, ty:Float):Void {
 		
 		this.a = a;
 		this.b = b;
@@ -683,7 +683,7 @@ class Matrix {
 	 *           pixels.
 	 * @param dy The amount of movement down along the _y_ axis, in pixels.
 	 */
-	public function translate (dx:Float, dy:Float):Void {
+	public inline function translate (dx:Float, dy:Float):Void {
 		
 		tx += dx;
 		ty += dy;

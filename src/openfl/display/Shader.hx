@@ -85,7 +85,7 @@ class Shader {
 	}
 	
 	
-	@:noCompletion private function __clearUseArray ():Void {
+	@:noCompletion private inline function __clearUseArray ():Void {
 		
 		for (parameter in __paramBool) {
 			
@@ -224,7 +224,7 @@ class Shader {
 	}
 	
 	
-	@:noCompletion private function __disable ():Void {
+	@:noCompletion private inline function __disable ():Void {
 		
 		if (program != null) {
 			
@@ -277,7 +277,7 @@ class Shader {
 	}
 	
 	
-	@:noCompletion private function __enable ():Void {
+	@:noCompletion private inline function __enable ():Void {
 		
 		__init ();
 		
@@ -312,7 +312,7 @@ class Shader {
 	}
 	
 	
-	@:noCompletion private function __init ():Void {
+	@:noCompletion private inline function __init ():Void {
 		
 		if (__data == null) {
 			
@@ -637,7 +637,7 @@ class Shader {
 	}
 	
 	
-	@:noCompletion private function __updateFromBuffer (shaderBuffer:ShaderBuffer, bufferOffset:Int):Void {
+	@:noCompletion private inline function __updateFromBuffer (shaderBuffer:ShaderBuffer, bufferOffset:Int):Void {
 		
 		if (program != null) {
 			
@@ -838,7 +838,7 @@ class Shader {
 	
 	
 	
-	@:noCompletion private function get_data ():ShaderData {
+	@:noCompletion private inline function get_data ():ShaderData {
 		
 		if (__glSourceDirty || __data == null) {
 			
@@ -851,21 +851,21 @@ class Shader {
 	}
 	
 	
-	@:noCompletion private function set_data (value:ShaderData):ShaderData {
+	@:noCompletion private inline function set_data (value:ShaderData):ShaderData {
 		
 		return __data = cast value;
 		
 	}
 	
 	
-	@:noCompletion private function get_glFragmentSource ():String {
+	@:noCompletion private inline function get_glFragmentSource ():String {
 		
 		return __glFragmentSource;
 		
 	}
 	
 	
-	@:noCompletion private function set_glFragmentSource (value:String):String {
+	@:noCompletion private inline function set_glFragmentSource (value:String):String {
 		
 		if (value != __glFragmentSource) {
 			
@@ -878,14 +878,14 @@ class Shader {
 	}
 	
 	
-	@:noCompletion private function get_glVertexSource ():String {
+	@:noCompletion private inline function get_glVertexSource ():String {
 		
 		return __glVertexSource;
 		
 	}
 	
 	
-	@:noCompletion private function set_glVertexSource (value:String):String {
+	@:noCompletion private inline function set_glVertexSource (value:String):String {
 		
 		if (value != __glVertexSource) {
 			

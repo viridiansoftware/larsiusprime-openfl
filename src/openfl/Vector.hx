@@ -680,21 +680,21 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function copy ():IVector<Float> {
+	public inline function copy ():IVector<Float> {
 		
 		return new FloatVector (fixed, __array.copy ());
 		
 	}
 	
 	
-	public function get (index:Int):Float {
+	public inline function get (index:Int):Float {
 		
 		return __array[index];
 		
 	}
 	
 	
-	public function indexOf (x:Float, ?from:Int = 0):Int {
+	public inline function indexOf (x:Float, ?from:Int = 0):Int {
 		
 		for (i in from...__array.length) {
 			
@@ -711,7 +711,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function insertAt (index:Int, element:Float):Void {
+	public inline function insertAt (index:Int, element:Float):Void {
 		
 		if (!fixed || index < __array.length) {
 			
@@ -722,21 +722,21 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function iterator ():Iterator<Float> {
+	public inline function iterator ():Iterator<Float> {
 		
 		return cast __array.iterator ();
 		
 	}
 	
 	
-	public function join (sep:String = ","):String {
+	public inline function join (sep:String = ","):String {
 		
 		return __array.join (sep);
 		
 	}
 	
 	
-	public function lastIndexOf (x:Float, ?from:Int = null):Int {
+	public inline function lastIndexOf (x:Float, ?from:Int = null):Int {
 		
 		var i = (from == null || from >= __array.length) ? __array.length - 1 : from;
 		
@@ -752,7 +752,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function pop ():Null<Float> {
+	public inline function pop ():Null<Float> {
 		
 		if (!fixed) {
 			
@@ -767,7 +767,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function push (x:Float):Int {
+	public inline function push (x:Float):Int {
 		
 		if (!fixed) {
 			
@@ -782,7 +782,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function removeAt (index:Int):Float {
+	public inline function removeAt (index:Int):Float {
 		
 		if (!fixed || index < __array.length) {
 			
@@ -795,7 +795,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function reverse ():IVector<Float> {
+	public inline function reverse ():IVector<Float> {
 		
 		__array.reverse ();
 		return this;
@@ -803,7 +803,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function set (index:Int, value:Float):Float {
+	public inline function set (index:Int, value:Float):Float {
 		
 		if (!fixed || index < __array.length) {
 			
@@ -818,7 +818,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function shift ():Null<Float> {
+	public inline function shift ():Null<Float> {
 		
 		if (!fixed) {
 			
@@ -833,28 +833,28 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function slice (?startIndex:Int = 0, ?endIndex:Int = 16777215):IVector<Float> {
+	public inline function slice (?startIndex:Int = 0, ?endIndex:Int = 16777215):IVector<Float> {
 		
 		return new FloatVector (__array.slice (startIndex, endIndex));
 		
 	}
 	
 	
-	public function sort (f:Float->Float->Int):Void {
+	public inline function sort (f:Float->Float->Int):Void {
 		
 		__array.sort (f);
 		
 	}
 	
 	
-	public function splice (pos:Int, len:Int):IVector<Float> {
+	public inline function splice (pos:Int, len:Int):IVector<Float> {
 		
 		return new FloatVector (__array.splice (pos, len));
 		
 	}
 	
 	
-	@:noCompletion @:keep private function toJSON () {
+	@:noCompletion @:keep private inline function toJSON () {
 		
 		return __array;
 		
@@ -868,7 +868,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function unshift (x:Float):Void {
+	public inline function unshift (x:Float):Void {
 		
 		if (!fixed) {
 			
@@ -886,14 +886,14 @@ abstract Vector<T>(IVector<T>) {
 	
 	
 	
-	@:noCompletion private function get_length ():Int {
+	@:noCompletion private inline function get_length ():Int {
 		
 		return __array.length;
 		
 	}
 	
 	
-	@:noCompletion private function set_length (value:Int):Int {
+	@:noCompletion private inline function set_length (value:Int):Int {
 		
 		if (value != __array.length && !fixed) {
 			
@@ -1010,7 +1010,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function get (index:Int):Function {
+	public inline function get (index:Int):Function {
 		
 		if (index >= __array.length) {
 			
@@ -1134,7 +1134,7 @@ abstract Vector<T>(IVector<T>) {
 	}
 	
 	
-	public function set (index:Int, value:Function):Function {
+	public inline function set (index:Int, value:Function):Function {
 		
 		if (!fixed || index < __array.length) {
 			
