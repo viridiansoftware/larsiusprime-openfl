@@ -81,7 +81,7 @@ class TextEngine {
 	public var maxScrollV (default, null):Int;
 	public var multiline:Bool;
 	public var numLines (default, null):Int;
-	public var restrict (default, set):UTF8String;
+	@:native("restrict_") public var restrict (default, set):UTF8String;
 	public var scrollH:Int;
 	public var scrollV:Int;
 	public var selectable:Bool;
@@ -161,12 +161,12 @@ class TextEngine {
 	}
 	
 	
-	private function createRestrictRegexp (restrict:String):EReg {
+	private function createRestrictRegexp (restrictRegexp:String):EReg {
 		
 		var declinedRange = ~/\^(.-.|.)/gu;
 		var declined = '';
 		
-		var accepted = declinedRange.map (restrict, function (ereg) {
+		var accepted = declinedRange.map (restrictRegexp, function (ereg) {
 			
 			declined += ereg.matched (1);
 			return '';
@@ -177,7 +177,7 @@ class TextEngine {
 		
 		if (accepted.length > 0) {
 			
-			testRegexpParts.push ('[^$restrict]');
+			testRegexpParts.push ('[^$restrictRegexp]');
 			
 		}
 		

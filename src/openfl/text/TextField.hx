@@ -448,7 +448,7 @@ class TextField extends InteractiveObject {
 	 * 
 	 * @default null
 	 */
-	public var restrict (get, set):UTF8String;
+	 @:native("restrict_") public var restrict (get, set):UTF8String;
 	
 	/**
 	 * The current horizontal scrolling position. If the `scrollH`
@@ -2152,7 +2152,7 @@ class TextField extends InteractiveObject {
 	}
 	
 	
-	@:noCompletion private function __replaceSelectedText (value:String, restrict:Bool = true):Void {
+	@:noCompletion private function __replaceSelectedText (value:String, restricted:Bool = true):Void {
 		
 		if (value == null) value = "";
 		if (value == "" && __selectionIndex == __caretIndex) return;
@@ -2173,7 +2173,7 @@ class TextField extends InteractiveObject {
 		}
 		if (startIndex < 0) startIndex = 0;
 		
-		__replaceText (startIndex, endIndex, value, restrict);
+		__replaceText (startIndex, endIndex, value, restricted);
 		
 		var i = startIndex + cast (value, UTF8String).length;
 		if (i > __text.length) i = __text.length;
@@ -2186,11 +2186,11 @@ class TextField extends InteractiveObject {
 	}
 	
 	
-	@:noCompletion private function __replaceText (beginIndex:Int, endIndex:Int, newText:String, restrict:Bool):Void {
+	@:noCompletion private function __replaceText (beginIndex:Int, endIndex:Int, newText:String, restricted:Bool):Void {
 		
 		if (endIndex < beginIndex || beginIndex < 0 || endIndex > __text.length || newText == null) return;
 		
-		if (restrict) {
+		if (restricted) {
 			
 			newText = __textEngine.restrictText (newText);
 			
@@ -2933,14 +2933,14 @@ class TextField extends InteractiveObject {
 		
 	}
 	
-	
+	@:native("get_restrict_")
 	@:noCompletion private function get_restrict ():String {
 		
 		return __textEngine.restrict;
 		
 	}
 	
-	
+	@:native("set_restrict_")
 	@:noCompletion private function set_restrict (value:String):String {
 		
 		if (__textEngine.restrict != value) {
